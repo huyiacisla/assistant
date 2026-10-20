@@ -1,0 +1,98 @@
+{
+  "buildFiles": [
+    "/Users/docs/persion/Assistivetouch/app/src/main/cpp/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/ggml-cpu/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/src/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/huyi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/huyi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "ggml::@1d562b45171badc9bf5f": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "ggml",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "ggml-base::@1d562b45171badc9bf5f": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "ggml-base",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so",
+      "runtimeFiles": []
+    },
+    "ggml-cpu::@1d562b45171badc9bf5f": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "ggml-cpu",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "parakeet::@63d3ec8989aed7458de8": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "parakeet",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libparakeet.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "recapstt::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "recapstt",
+      "output": "/Users/docs/persion/Assistivetouch/app/build/intermediates/cxx/Debug/5x2625av/obj/arm64-v8a/librecapstt.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libwhisper.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "whisper::@63d3ec8989aed7458de8": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "whisper",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libwhisper.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/Users/huyi/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/Users/huyi/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [
+    "c"
+  ],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

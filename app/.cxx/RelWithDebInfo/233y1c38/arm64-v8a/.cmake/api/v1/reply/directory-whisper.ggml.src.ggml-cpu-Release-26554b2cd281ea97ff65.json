@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "whisper/ggml/src/ggml-cpu",
+		"source" : "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/ggml-cpu"
+	}
+}

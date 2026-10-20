@@ -1,0 +1,80 @@
+{
+  "buildFiles": [
+    "/Users/docs/persion/Assistivetouch/app/src/main/cpp/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/ggml-cpu/CMakeLists.txt",
+    "/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/src/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/huyi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/huyi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "whisper::@63d3ec8989aed7458de8": {
+      "artifactName": "whisper",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libwhisper.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "parakeet::@63d3ec8989aed7458de8": {
+      "artifactName": "parakeet",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libparakeet.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "ggml::@1d562b45171badc9bf5f": {
+      "artifactName": "ggml",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "recapstt::@6890427a1f51a3e7e1df": {
+      "artifactName": "recapstt",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/build/intermediates/cxx/Debug/5x2625av/obj/arm64-v8a/librecapstt.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libwhisper.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    },
+    "ggml-base::@1d562b45171badc9bf5f": {
+      "artifactName": "ggml-base",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so",
+      "runtimeFiles": []
+    },
+    "ggml-cpu::@1d562b45171badc9bf5f": {
+      "artifactName": "ggml-cpu",
+      "abi": "arm64-v8a",
+      "output": "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-cpu.so",
+      "runtimeFiles": [
+        "/Users/docs/persion/Assistivetouch/app/.cxx/Debug/5x2625av/arm64-v8a/bin/libggml-base.so"
+      ]
+    }
+  }
+}

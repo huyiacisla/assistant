@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- chỉ bản debug: đo tốc độ STT bằng WAV đẩy qua adb (không đụng UI/mic) -->
+        <receiver android:name="com.huyi.recap.capture.SttBench" android:exported="true" />
+    </application>
+</manifest>

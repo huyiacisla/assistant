@@ -1,0 +1,1 @@
+/Users/docs/persion/Assistivetouch/app/build/intermediates/cxx/RelWithDebInfo/233y1c38/obj/arm64-v8a

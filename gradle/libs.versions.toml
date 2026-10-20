@@ -1,0 +1,27 @@
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+composeBom = "2026.06.01"
+activityCompose = "1.10.1"
+room = "2.8.5"
+ksp = "2.3.12"
+mlkitOcr = "16.0.1"
+playAuth = "21.3.0"
+work = "2.10.2"
+
+[libraries]
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-icons = { module = "androidx.compose.material:material-icons-extended" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+work = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+play-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playAuth" }
+mlkit-ocr = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitOcr" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

@@ -1,0 +1,407 @@
+{
+  "enforcedSince": "2026-10-20",
+  "types": {
+    "GUIDE": {
+      "folder": "documents/00-guides",
+      "status": ["draft", "active", "superseded", "archived"],
+      "sections": [
+        { "title": "Purpose", "tables": [{ "columns": ["Đối tượng", "Kết quả cần đạt", "Phạm vi"] }] },
+        {
+          "title": "Rules",
+          "tables": [
+            { "columns": ["Rule ID", "Rule", "Reason"] },
+            {
+              "legend": "Rule × Scope: `●` áp · `—` không.",
+              "matrix": true,
+              "columns": ["Rule", "AUTH", "BE", "ADM", "CLI", "RES", "STAFF", "WEB"]
+            }
+          ]
+        },
+        {
+          "title": "Exceptions",
+          "hint": "N/A — <reason> khi không có ngoại lệ.",
+          "tables": [{ "columns": ["Ngoại lệ", "Lý do", "Phạm vi"] }]
+        },
+        { "title": "Validation", "tables": [{ "columns": ["Lệnh/Bằng chứng", "Kết quả mong đợi"] }] }
+      ]
+    },
+    "PRODUCT": {
+      "folder": "documents/01-product",
+      "status": ["idea", "specified", "in-progress", "shipped", "superseded", "archived"],
+      "sections": [
+        { "title": "Overview", "tables": [{ "columns": ["User", "Vấn đề", "Kết quả"] }] },
+        { "title": "Scope", "tables": [{ "columns": ["Hạng mục", "Trong phạm vi", "Lý do loại"] }] },
+        {
+          "title": "Requirements",
+          "tables": [{ "columns": ["Check", "ID", "Requirement", "Status", "Owner", "Updated"] }]
+        },
+        {
+          "title": "UI/UX",
+          "hint": "N/A — <reason> khi không có UI.",
+          "tables": [{ "columns": ["Flow", "Entry", "Hành động", "Kết quả"] }]
+        },
+        {
+          "title": "API / Data",
+          "hint": "N/A — <reason>, hoặc contract:",
+          "tables": [
+            { "columns": ["Endpoint/Dữ liệu", "Method", "Auth", "Input", "Output"] },
+            {
+              "legend": "Endpoint × Vai trò: `●` cho phép · `—` cấm.",
+              "matrix": true,
+              "columns": ["Endpoint/Dữ liệu", "<role 1>", "<role 2>"]
+            }
+          ]
+        },
+        {
+          "title": "Acceptance",
+          "hint": "`●` kiểm chính · `○` bổ trợ · `—` không áp. Lệnh/đường dẫn kiểm cụ thể ghi ở doc QA.",
+          "tables": [
+            {
+              "columns": [
+                "Requirement ID",
+                "Tiêu chí nghiệm thu quan sát được",
+                "Unit",
+                "E2E",
+                "Manual",
+                "A11y",
+                "Security"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Related",
+          "hint": "none khi không có quan hệ.",
+          "tables": [{ "columns": ["Document ID", "Quan hệ"] }]
+        }
+      ]
+    },
+    "ARCHITECTURE": {
+      "folder": "documents/02-architecture",
+      "status": ["draft", "approved", "superseded", "archived"],
+      "sections": [
+        { "title": "Context", "tables": [{ "columns": ["Ranh giới", "Quyết định", "Ràng buộc"] }] },
+        { "title": "Current State", "tables": [{ "columns": ["Thành phần", "Route / Dữ liệu", "Evidence"] }] },
+        {
+          "title": "Decision",
+          "hint": "Chosen architecture and rationale. `●` chọn · `○` phụ · `—` loại.",
+          "tables": [{ "matrix": true, "columns": ["Phương án", "<criterion 1>", "<criterion 2>", "Chọn"] }]
+        },
+        {
+          "title": "Interfaces",
+          "tables": [
+            { "columns": ["Interface", "Input", "Output", "Owner"] },
+            {
+              "legend": "Interface × Consumer: `●` gọi · `—` không.",
+              "matrix": true,
+              "columns": ["Interface", "<consumer 1>", "<consumer 2>"]
+            }
+          ]
+        },
+        {
+          "title": "Security & Data",
+          "hint": "Auth, tenant scope, RLS, audit, sensitive data. `●` truy cập · `—` cấm.",
+          "tables": [{ "matrix": true, "columns": ["Vai trò", "<data scope/RLS 1>", "<data scope/RLS 2>", "Audit"] }]
+        },
+        {
+          "title": "Risks & Tradeoffs",
+          "tables": [{ "columns": ["Check", "ID", "Risk", "Status", "Owner", "Updated"] }]
+        },
+        { "title": "Verification", "tables": [{ "columns": ["Kiểm", "Lệnh", "Kết quả", "Evidence"] }] },
+        {
+          "title": "Related",
+          "hint": "none khi không có quan hệ.",
+          "tables": [{ "columns": ["Document ID", "Quan hệ"] }]
+        }
+      ]
+    },
+    "PLAN": {
+      "folder": "documents/03-plans",
+      "status": ["draft", "approved", "in-progress", "blocked", "done", "archived"],
+      "sections": [
+        { "title": "Goal", "tables": [{ "columns": ["Mục tiêu", "Chỉ số đo", "Mốc"] }] },
+        { "title": "Phases", "tables": [{ "columns": ["Check", "ID", "Phase", "Status", "Owner", "Target"] }] },
+        {
+          "title": "Tasks",
+          "tables": [
+            { "columns": ["Check", "ID", "Task", "Status", "Owner", "Updated", "Related ID"] },
+            {
+              "legend": "Task × Phase: `●` thuộc · `○` bổ trợ · `—` không.",
+              "matrix": true,
+              "columns": ["Task", "R01"]
+            }
+          ]
+        },
+        { "title": "Risks", "tables": [{ "columns": ["Check", "ID", "Risk", "Status", "Owner", "Updated"] }] },
+        { "title": "Dependencies", "tables": [{ "columns": ["Document ID", "Quan hệ (Requires | Blocks)"] }] },
+        {
+          "title": "Progress",
+          "hint": "Target ID nhận ĐÚNG 1 ID/cell (bare `DOC-<12_HEX>` khi không suy được; KHÔNG dùng `none`); `|` trong Event MUST escape `\\|`.",
+          "tables": [{ "columns": ["Event ID", "Actor", "Target ID", "Status", "Occurred", "Recorded", "Event"] }]
+        }
+      ]
+    },
+    "PHASE": {
+      "folder": "documents/04-phases",
+      "status": ["upcoming", "active", "blocked", "done", "archived"],
+      "sections": [
+        { "title": "Objective", "tables": [{ "columns": ["Mục tiêu", "Chỉ số đo"] }] },
+        {
+          "title": "Deliverables",
+          "tables": [{ "columns": ["Check", "ID", "Deliverable", "Status", "Owner", "Target"] }]
+        },
+        { "title": "Tasks", "hint": "none khi chưa có task.", "tables": [{ "columns": ["Task ref", "Deliverable"] }] },
+        {
+          "title": "Definition of Done",
+          "tables": [
+            { "columns": ["Check", "ID", "Điều kiện hoàn thành", "Status", "Owner", "Verified"] },
+            { "legend": "DoD × Deliverable: `●` đo bằng · `—` không.", "matrix": true, "columns": ["DoD", "R01"] }
+          ]
+        },
+        { "title": "Retrospective", "tables": [{ "columns": ["Loại (Well | Improve | Next)", "Sự thật / hành động"] }] }
+      ]
+    },
+    "DESIGN": {
+      "folder": "documents/05-designs",
+      "status": ["draft", "approved", "superseded", "archived"],
+      "note": "Phương pháp: phân tích design trước (§2) → khoá mapping (§5) → manifest từng UI node có trạng thái (§6) → AI bám file, làm tới đâu cập nhật tới đó (§6 + §10). Nền tảng: DOC-daaec8634d3d.",
+      "sections": [
+        { "title": "User Problem", "tables": [{ "columns": ["User", "Bối cảnh", "Kết quả mong muốn"] }] },
+        {
+          "title": "Design Source",
+          "hint": "Visual authority + kết quả audit trước khi code. Số liệu lấy bằng script (Penpot Plugin API), không ước lượng. Audit thấp (layout/token/instance) ⇒ báo designer sửa design trước hoặc chấp nhận heuristic ở §6. Hàng: Penpot file · Page · Board(s) · Baseline export · Audited · Node total · Layout coverage · Token coverage · Component instance.",
+          "tables": [{ "columns": ["Field", "Value"] }]
+        },
+        {
+          "title": "Principles",
+          "hint": "Design constraints + quyết định. 4 rule cứng cho AI: (1) chỉ code node có trong §6, không thêm/bớt element ngoài manifest; (2) text/màu/spacing/typography trích từ cột `Spec` kèm node id, không tự chọn giá trị 'hợp lý'; (3) thiếu thông tin ⇒ `gap` + câu hỏi cho designer, không suy đoán; (4) ưu tiên `packages/ui` theo §5, không vẽ CSS mới khi đã có component.",
+          "tables": [{ "columns": ["Rule", "Nội dung"] }]
+        },
+        { "title": "Flow", "tables": [{ "columns": ["Bước", "Entry", "Hành động", "Kết quả"] }] },
+        {
+          "title": "Mapping",
+          "hint": "Penpot → code, khoá 1 lần trước khi code. Chỉ liệt kê thứ screen này dùng; mapping dùng chung tham chiếu Document ID.",
+          "tables": [{ "columns": ["Penpot", "Code", "Note"] }]
+        },
+        {
+          "title": "Node Manifest",
+          "hint": "1 bảng / 1 screen board (`### 6.<n> <tên board>`), ≤ 150 dòng; leaf text gộp vào dòng component cha. Cột `Node`/`Spec` do script sinh (AI không sửa); `Map`/`Code`/`Status` do AI cập nhật tới `coded`; `verified` chỉ do script/QA đóng kèm ngày ở `Verified`. Status: `todo` → `mapped` → `coded` → `verified` · `gap` (thiếu thông tin) · `skip` (decorative/reference, ghi lý do ở Map) · `stale` (design đổi sau khi sinh).",
+          "tables": [
+            {
+              "heading": "<Screen board>",
+              "columns": ["Check", "ID", "Node", "Spec", "Map", "Code", "Status", "Owner", "Verified"]
+            }
+          ]
+        },
+        {
+          "title": "States",
+          "hint": "Loading, empty, error, success, responsive. State có board Penpot ⇒ liệt kê node ở §6; không có ⇒ ghi 'no design' + quyết định. `●` có board · `—` no design.",
+          "tables": [{ "matrix": true, "columns": ["State", "Desktop", "Mobile", "Quyết định"] }]
+        },
+        {
+          "title": "Accessibility",
+          "hint": "`●` đạt · `fail` lỗi · `—` không áp.",
+          "tables": [{ "matrix": true, "columns": ["Hạng mục", "Desktop", "Mobile", "Cách kiểm", "Evidence"] }]
+        },
+        {
+          "title": "Validation",
+          "hint": "Gate máy trước, review người sau. Coverage = node `verified` / (total − `skip`). Không đóng `approved` khi còn `todo|stale`.",
+          "tables": [{ "columns": ["Check", "ID", "Check item", "Status", "Owner", "Verified", "Evidence"] }]
+        },
+        {
+          "title": "Execution Log",
+          "hint": "1 dòng / lần cập nhật manifest; ghi số node đổi trạng thái.",
+          "tables": [{ "columns": ["Date", "Actor", "Change", "ID"] }]
+        },
+        {
+          "title": "Related",
+          "hint": "none khi không có quan hệ.",
+          "tables": [{ "columns": ["Document ID", "Quan hệ"] }]
+        }
+      ]
+    },
+    "TASK": {
+      "folder": "documents/06-tasks",
+      "status": ["todo", "in-progress", "blocked", "done", "cancelled", "archived"],
+      "sections": [
+        {
+          "title": "Input",
+          "hint": "Workflow: chạy theo DOC-9f1ae46a1a38 — `pnpm flow run:new \"<request>\" --doc=<ID doc này>`, tick bằng `run:tick`.",
+          "tables": [{ "columns": ["Trường", "Giá trị"] }]
+        },
+        {
+          "title": "Analysis",
+          "hint": "`●` ràng buộc row · `○` phụ thuộc · `—` không áp.",
+          "tables": [
+            { "columns": ["Điểm (Problem | Assumptions | Rejected)", "Chi tiết"] },
+            { "matrix": true, "columns": ["Ràng buộc / phụ thuộc", "R01", "R02"] }
+          ]
+        },
+        { "title": "Plan", "tables": [{ "columns": ["Check", "ID", "Action", "Status", "Owner", "Updated"] }] },
+        { "title": "Execution Log", "tables": [{ "columns": ["Date", "Actor", "Change"] }] },
+        { "title": "Retrospective", "tables": [{ "columns": ["Kết quả", "Vấn đề", "Bài học"] }] }
+      ]
+    },
+    "BUG": {
+      "folder": "documents/07-issues/bugs",
+      "status": ["open", "in-progress", "fixed", "verified", "wont-fix", "archived"],
+      "sections": [
+        { "title": "Summary", "tables": [{ "columns": ["Severity (P0 | P1 | P2)", "Tác động quan sát"] }] },
+        {
+          "title": "Reproduce",
+          "tables": [{ "columns": ["Bước", "Môi trường"] }, { "columns": ["Expected", "Actual"] }]
+        },
+        { "title": "Root Cause", "tables": [{ "columns": ["File / symbol", "Nguyên nhân", "Evidence"] }] },
+        {
+          "title": "Fix",
+          "tables": [
+            { "columns": ["Check", "ID", "Change", "Status", "Owner", "Updated"] },
+            {
+              "legend": "Fix × Tầng: `●` sửa · `○` ảnh hưởng · `—` không.",
+              "matrix": true,
+              "columns": ["Fix", "BE", "UI", "DB", "Test"]
+            }
+          ]
+        },
+        {
+          "title": "Verify",
+          "hint": "`●` passed · `fail` failed · `—` không chạy. Hàng: Không còn tái hiện · Regression · Chẩn đoán (log/metric).",
+          "tables": [{ "matrix": true, "columns": ["Kiểm", "Local", "CI", "Staging", "Evidence"] }]
+        },
+        { "title": "Lesson", "tables": [{ "columns": ["Quy tắc phòng ngừa", "Áp dụng ở"] }] }
+      ]
+    },
+    "REFACTOR": {
+      "folder": "documents/07-issues/refactors",
+      "status": ["planned", "in-progress", "blocked", "done", "cancelled", "archived"],
+      "sections": [
+        { "title": "Problem", "tables": [{ "columns": ["Loại nợ", "Mô tả", "Evidence"] }] },
+        { "title": "Current State", "tables": [{ "columns": ["File / symbol", "Evidence"] }] },
+        {
+          "title": "Solution",
+          "hint": "No-behavior-change design and invariants. `●` kiểm chính · `○` bổ trợ · `—` không áp.",
+          "tables": [{ "matrix": true, "columns": ["Điều bất biến", "tsc", "eslint", "Unit", "E2E", "Visual"] }]
+        },
+        { "title": "Plan", "tables": [{ "columns": ["Check", "ID", "Action", "Status", "Owner", "Updated"] }] },
+        { "title": "Execution Log", "tables": [{ "columns": ["Date", "Actor", "Change"] }] },
+        {
+          "title": "Result",
+          "tables": [{ "columns": ["Changed", "Risk còn lại", "Tests"] }, { "columns": ["Metric", "Trước", "Sau"] }]
+        },
+        { "title": "Lesson", "tables": [{ "columns": ["Khuyến nghị tiếp theo", "Điều kiện"] }] }
+      ]
+    },
+    "QA": {
+      "folder": "documents/08-qa",
+      "status": ["draft", "running", "passed", "failed", "blocked", "done", "archived"],
+      "sections": [
+        { "title": "Scope", "tables": [{ "columns": ["Workflow", "Vai trò", "Route", "Môi trường"] }] },
+        {
+          "title": "Preconditions",
+          "hint": "No secrets. `●` cần · `—` không cần.",
+          "tables": [{ "matrix": true, "columns": ["Vai trò", "Account", "Property scope", "Fixture"] }]
+        },
+        {
+          "title": "Test Executions",
+          "tables": [{ "columns": ["Execution ID", "Case ID", "Status", "Actor", "Executed", "Evidence"] }]
+        },
+        {
+          "title": "Security Checks",
+          "hint": "Authorization, RLS, negative cases. `●` cho phép · `—` từ chối.",
+          "tables": [{ "matrix": true, "columns": ["Vai trò", "<route/resource 1>", "<route/resource 2>", "Evidence"] }]
+        },
+        {
+          "title": "Regression",
+          "hint": "`●` passed · `fail` failed · `blocked` blocked · `—` không áp.",
+          "tables": [{ "matrix": true, "columns": ["Workflow liên quan", "Desktop", "Mobile", "Evidence"] }]
+        },
+        { "title": "Result", "tables": [{ "columns": ["Passed", "Failed", "Blocked", "Risk"] }] },
+        { "title": "Follow-up", "tables": [{ "columns": ["Ref", "Loại", "Việc cần làm"] }] }
+      ]
+    },
+    "RUNBOOK": {
+      "folder": "documents/09-runbooks",
+      "status": ["draft", "approved", "active", "deprecated", "archived"],
+      "sections": [
+        { "title": "Purpose", "tables": [{ "columns": ["Kết quả vận hành", "Môi trường"] }] },
+        {
+          "title": "Preconditions",
+          "hint": "Access, backup, approvals, safety checks; no secrets. `●` bắt buộc · `○` nên có · `—` không áp.",
+          "tables": [{ "matrix": true, "columns": ["Điều kiện", "Dev", "Staging", "Prod", "Cách kiểm"] }]
+        },
+        { "title": "Procedure", "tables": [{ "columns": ["Step", "Actor Role", "Action", "Expected Result"] }] },
+        {
+          "title": "Verification",
+          "hint": "`●` chạy · `—` không áp.",
+          "tables": [{ "matrix": true, "columns": ["Check", "Lệnh", "Kết quả mong đợi", "Dev", "Staging", "Prod"] }]
+        },
+        {
+          "title": "Rollback / Recovery",
+          "tables": [{ "columns": ["Step", "Actor Role", "Action", "Expected Result"] }]
+        },
+        {
+          "title": "Escalation",
+          "hint": "`●` owner xử lý · `○` duyệt · `—` không liên quan.",
+          "tables": [{ "matrix": true, "columns": ["Tình huống", "<role 1>", "<role 2>", "huyi0"] }]
+        },
+        { "title": "Change Log", "tables": [{ "columns": ["Date", "Actor", "Change"] }] }
+      ]
+    },
+    "REPORT": {
+      "folder": "documents/10-reports",
+      "status": ["draft", "published", "actioned", "archived"],
+      "note": "Viết cho người đọc trực tiếp, không chỉ để qua doc-gate: giải thích khái niệm trước khi vào bảng, nêu rõ kết quả, đề xuất giải pháp cụ thể.",
+      "sections": [
+        {
+          "title": "Scope",
+          "hint": "Nếu chủ đề không hiển nhiên, giải thích khái niệm 1-2 câu trước khi nêu câu hỏi/ranh giới báo cáo trả lời. Kèm thời điểm rà soát.",
+          "tables": [{ "columns": ["Câu hỏi", "Ranh giới", "Thời điểm rà soát"] }]
+        },
+        { "title": "Method", "tables": [{ "columns": ["Nguồn", "Lệnh", "Giới hạn"] }] },
+        {
+          "title": "Findings",
+          "hint": "Mở đầu bằng 1 dòng in đậm nêu kết quả tổng quan (VD **Kết quả: áp dụng X/Y <tiêu chí>.**). Mỗi Finding viết thành câu đầy đủ, người đọc lần đầu hiểu được.",
+          "tables": [{ "columns": ["Check", "ID", "Finding", "Status", "Owner", "Verified"] }]
+        },
+        { "title": "Evidence", "tables": [{ "columns": ["Path", "Actor", "Captured", "Commit / Request"] }] },
+        {
+          "title": "Recommendations",
+          "hint": "**Kết quả:** 1 câu kết luận rút ra từ Findings. **Giải pháp:** hành động cụ thể, ưu tiên theo Related ID; nêu điều kiện kích hoạt nếu đề xuất là 'chưa làm ngay'.",
+          "tables": [
+            { "columns": ["Ưu tiên", "Giải pháp", "Điều kiện kích hoạt", "Related ID"] },
+            {
+              "legend": "Giải pháp × Finding: `●` xử lý · `○` giảm nhẹ · `—` không.",
+              "matrix": true,
+              "columns": ["Giải pháp", "R01"]
+            }
+          ]
+        },
+        {
+          "title": "Follow-up",
+          "hint": "none khi chưa có việc tiếp.",
+          "tables": [{ "columns": ["Actioned", "Task ref"] }]
+        }
+      ]
+    },
+    "BACKLOG": {
+      "folder": "documents/13-backlog",
+      "status": ["open", "planned", "in-progress", "blocked", "done", "cancelled", "archived"],
+      "note": "Sổ việc tồn (nợ, việc chưa xếp lịch, việc chờ quyết định): 1 dòng = 1 mục có ID; xử lý theo Priority rồi chuyển sang TASK/BUG/REFACTOR khi bắt đầu làm.",
+      "sections": [
+        {
+          "title": "Items",
+          "hint": "Priority: `P0` chặn · `P1` sớm · `P2` khi rảnh. Ma trận: `●` cao · `◐` vừa · `○` thấp · `—` không áp.",
+          "tables": [
+            { "columns": ["Check", "ID", "Item", "Priority", "Status", "Owner", "Updated"] },
+            {
+              "legend": "Item × Tiêu chí: `●` cao · `◐` vừa · `○` thấp · `—` không áp.",
+              "matrix": true,
+              "columns": ["Item", "Tác động", "Công sức", "Rủi ro", "Bị chặn"]
+            }
+          ]
+        },
+        { "title": "Execution Log", "tables": [{ "columns": ["Date", "Actor", "Change"] }] }
+      ]
+    }
+  }
+}

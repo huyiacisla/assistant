@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <queries><package android:name="com.google.android.googlequicksearchbox" /></queries>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- app cá nhân, không lên Play: USE_EXACT_ALARM tự cấp (API 33+), tránh SecurityException khi đặt báo thức -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- cấp bằng adb: pm grant com.huyi.recap android.permission.READ_LOGS (dùng để phát hiện copy ở mọi app) -->
+    <uses-permission android:name="android.permission.READ_LOGS" />
+
+    <application
+        android:label="Recap"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.share" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/share_paths" />
+        </provider>
+
+        <activity
+            android:name=".app.MainActivity"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".feature.capture.CaptureActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity
+            android:name=".feature.clipboard.ClipboardActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity
+            android:name=".feature.quicknote.QuickNoteActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:windowSoftInputMode="adjustNothing"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Recap.Sheet" />
+
+        <receiver android:name=".feature.remind.RemindReceiver" android:exported="false" />
+        <receiver android:name=".feature.remind.RemindBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".feature.remind.RemindActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <service
+            android:name=".feature.capture.CaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
+            android:name=".feature.capture.ShotAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_config" />
+        </service>
+
+        <service
+            android:name=".overlay.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_capture_button" />
+        </service>
+    </application>
+</manifest>

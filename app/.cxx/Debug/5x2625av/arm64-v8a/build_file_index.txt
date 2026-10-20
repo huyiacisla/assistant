@@ -1,0 +1,6 @@
+/Users/docs/persion/Assistivetouch/app/src/main/cpp/CMakeLists.txt
+/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/CMakeLists.txt
+/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/CMakeLists.txt
+/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/CMakeLists.txt
+/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/ggml/src/ggml-cpu/CMakeLists.txt
+/Users/docs/persion/Assistivetouch/third_party/whisper.cpp/src/CMakeLists.txt

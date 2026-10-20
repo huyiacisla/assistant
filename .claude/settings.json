@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'ISSUE-HOOK: nếu prompt là issue/yêu cầu/lỗi mới → phân tích ngay, KHÔNG chờ hỏi. 1) chạy skill doc-classify (.claude/skills/doc-classify) chọn thư mục documents/ đúng cho tài liệu của issue; 2) chạy workflow documents/00-guides/vibecoding_workflow_20-10-2026.md liền một mạch bước 1→8 (hỏi Founder tối đa 1 lần ở bước 1–4). Câu hỏi thuần/hội thoại thì bỏ qua hook này.'"
+          }
+        ]
+      }
+    ]
+  }
+}
