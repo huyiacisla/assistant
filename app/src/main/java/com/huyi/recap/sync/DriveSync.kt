@@ -15,6 +15,16 @@ import org.json.JSONObject
 object DriveSync {
     private const val API = "https://www.googleapis.com"
 
+    /** Gộp bản Drive cũ với bản cục bộ: giữ mục chỉ có trên Drive (đã purge / máy khác), bản cục bộ thắng khi trùng uid (hoặc createdAt+text với bản chưa có uid). */
+    fun merge(old: JSONArray?, local: JSONArray): JSONArray {
+        fun key(o: JSONObject) = o.optString("uid").ifEmpty { "${o.optLong("createdAt")}:${o.optString("text")}" }
+        val have = (0 until local.length()).map { key(local.getJSONObject(it)) }.toHashSet()
+        val out = JSONArray()
+        if (old != null) for (i in 0 until old.length()) old.optJSONObject(i)?.takeIf { key(it) !in have }?.let(out::put)
+        for (i in 0 until local.length()) out.put(local.getJSONObject(i))
+        return out
+    }
+
     fun toJson(all: List<Item>): String = JSONArray().also { a ->
         all.sortedBy { it.id }.forEach { i ->
             a.put(JSONObject().put("uid", i.uid).put("updatedAt", i.updatedAt).put("type", i.type).put("text", i.text).put("image", i.imagePath?.let { File(it).name })
@@ -28,7 +38,8 @@ object DriveSync {
         val folder = find(token, "name='Recap' and mimeType='application/vnd.google-apps.folder' and trashed=false")
             ?: create(token, JSONObject().put("name", "Recap").put("mimeType", "application/vnd.google-apps.folder"), null, null)
         val have = list(token, "'$folder' in parents and trashed=false")
-        val json = toJson(all).toByteArray()
+        val old = have["recap.json"]?.let { runCatching { JSONArray(download(token, it).decodeToString()) }.getOrNull() }   // không đọc được bản cũ ⇒ coi như mới, như trước
+        val json = merge(old, JSONArray(toJson(all))).toString(1).toByteArray()
         have["recap.json"]?.let { update(token, it, json, "application/json") }
             ?: create(token, JSONObject().put("name", "recap.json").put("parents", JSONArray().put(folder)), json, "application/json")
         var up = 0
@@ -58,9 +69,11 @@ object DriveSync {
             }
             fun s(n: String) = if (o.isNull(n)) null else o.getString(n)
             fun l(n: String) = if (o.isNull(n)) null else o.getLong(n)
-            dao.insert(Item(type = o.getString("type"), text = o.getString("text"), imagePath = path, source = s("source"), createdAt = o.getLong("createdAt"),
+            val item = Item(type = o.getString("type"), text = o.getString("text"), imagePath = path, source = s("source"), createdAt = o.getLong("createdAt"),
                 uid = uid.ifEmpty { java.util.UUID.randomUUID().toString() }, updatedAt = o.optLong("updatedAt", o.getLong("createdAt")), tags = o.optString("tags"), title = o.optString("title"), summary = o.optString("summary"), aiStatus = o.optString("aiStatus", "pending"), remindAt = l("remindAt"), status = o.optString("status", "open"),
-                kind = o.optString("kind"), deletedAt = l("deletedAt")))
+                kind = o.optString("kind"), deletedAt = l("deletedAt"))
+            val id = dao.insert(item)
+            item.remindAt?.takeIf { it > System.currentTimeMillis() && item.deletedAt == null && item.status == "open" }?.let { com.huyi.recap.feature.remind.scheduleRemind(ctx, id, it, item.text) }   // nhắc không nằm trong báo thức hệ thống sau khi cài lại
             add++
         }
         add to img
@@ -68,6 +81,7 @@ object DriveSync {
 
     private fun download(t: String, id: String): ByteArray {
         val c = URL("$API/drive/v3/files/$id?alt=media").openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000; c.readTimeout = 60_000
         c.setRequestProperty("Authorization", "Bearer $t")
         try { if (c.responseCode != 200) error("Drive ${c.responseCode}"); return c.inputStream.readBytes() } finally { c.disconnect() }
     }
@@ -78,6 +92,7 @@ object DriveSync {
         val c = URL(url).openConnection() as HttpURLConnection
         c.requestMethod = if (method == "PATCH") "POST" else method
         if (method == "PATCH") c.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+        c.connectTimeout = 15_000; c.readTimeout = 60_000
         c.setRequestProperty("Authorization", "Bearer $token")
         try {
             if (body != null) { c.doOutput = true; c.setRequestProperty("Content-Type", ctype); c.outputStream.use { it.write(body) } }

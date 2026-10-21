@@ -9,7 +9,8 @@ Mục tiêu: Recap → Drive của chính Founder (Gmail cá nhân), không back
 | Quyền | `drive.file` | chỉ thấy tệp do app tạo |
 | Đăng nhập | Play Services `AuthorizationClient` | không cần client secret |
 | Gọi API | REST `HttpURLConnection` | cùng kiểu `capture/Ai.kt`, 0 dep thêm |
-| OAuth client | Android: `com.huyi.recap` + SHA-1 debug `99:5A:43:7E:78:B7:87:B0:F1:1A:46:88:93:E1:3B:E3:19:62:CE:82` | Founder tạo trên Google Cloud Console |
+| OAuth client | Android: `com.huyi.recap` + SHA-1 debug `99:5A:43:7E:78:B7:87:B0:F1:1A:46:88:93:E1:3B:E3:19:62:CE:82` (client `recap`) | Founder tạo trên Google Cloud Console |
+| OAuth client (release) | Android: `com.huyi.recap` + SHA-1 release `A5:68:50:DF:F8:4F:87:53:42:61:7B:54:83:05:A3:0C:27:32:70:E3` (client `recap-release`, 21/10) | mỗi khoá ký cần một client riêng; không đổi code |
 
 ## Checklist
 - [x] 10.0 Founder: Cloud project + bật Drive API + màn hình đồng ý (thêm Gmail làm test user) + OAuth client Android (thông số trên)
