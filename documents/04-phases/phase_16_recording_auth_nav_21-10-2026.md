@@ -20,6 +20,10 @@ Chỉ dựa vào code + build + unit test; **chưa thử trên máy thật**.
 - [x] Menu "Thống kê"
 - [x] `onNewIntent` giữ state; bỏ extra `clip`
 - [x] `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease` xanh (21/10, gồm R8 release; cảnh báo cũ không đổi)
+- [x] 21/10 15:38 cài `app-release.apk` lên Redmi (`install -r`, giữ dữ liệu: 2 note cũ còn), cấp lại quyền bằng adb, mở app: không crash (`logcat -b crash` 0 dòng). Nút nổi bị HyperOS tắt sau cài (adb không khởi động được `OverlayService`: không export) ⇒ Founder bật lại trong Cài đặt → "Nút nổi"
+- [x] 21/10 15:40–15:44 thử bằng adb trên Redmi (bản release): menu nổi hiện đủ 6 mục + Đóng, vừa màn hình; **"Thống kê" mở đúng màn "Recap hôm nay"** (7 mục, tag, nút Sao chép/Chia sẻ); `am start --es go cards` → tab Recap, `--es go note` → tab Note (đi qua `onNewIntent`, không crash, 0 dòng `logcat -b crash`)
+- [x] Lỗi mới thấy trên máy: **Back ở màn Thống kê thoát hẳn app ra màn hình chính** (thiếu `BackHandler`, đúng mục #5 audit) ⇒ thêm `BackHandler(enabled = screen.isNotEmpty())` trong `KhoScreen`, cài lại, thử lại: Back về tab Note, app còn mở
+- [ ] Chưa kiểm được trên máy: bộ lọc còn nguyên sau menu nổi (tap adb ở nửa trên màn hình không đổi được ngày/bộ lọc nên chưa dựng được trạng thái để so sánh); Chụp & Lưu không còn bubble trong ảnh; Thùng rác xác nhận; ghi âm 60 s / `onStop`; Drive 401
 - [ ] Máy thật: ghi âm dài >60 s tự dừng; mở micro khi app khác đang dùng mic ⇒ thông báo, không crash
 - [ ] Máy thật: thoát app khi đang ghi ⇒ mic tắt, phần đã nói còn
 - [ ] Máy thật: menu nổi ⇒ "Thống kê" mở đúng màn; bấm "Recap"/"Sao chép"/"Ghi chú" khi đã đặt bộ lọc ⇒ bộ lọc Note còn nguyên

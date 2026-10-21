@@ -128,6 +128,8 @@ fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, go: String? = null, goTick
     // menu nổi gửi intent khi app đang mở: chỉ đổi tab/màn, giữ nguyên bộ lọc (không dựng lại KhoScreen)
     LaunchedEffect(goTick) { if (goTick > 0) { tab = when (go) { "clip" -> 2; "cards" -> 1; else -> 0 }; screen = if (go == "recap") "recap" else ""; openId = null; viewing = null } }
 
+    androidx.activity.compose.BackHandler(enabled = screen.isNotEmpty()) { screen = "" }   // Back ở Thống kê/Thùng rác về tab, không thoát app (thấy trên Redmi 21/10)
+
     // Folder bị xoá khi đang lọc ⇒ quay về Tất cả
     LaunchedEffect(folders) { if (filter >= 0 && folders.none { it.id == filter }) filter = ALL }
 
