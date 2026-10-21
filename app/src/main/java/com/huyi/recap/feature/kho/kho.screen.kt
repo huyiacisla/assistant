@@ -146,7 +146,7 @@ fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, startOnClipboard: Boolean 
     LaunchedEffect(todo?.id) {
         val t = todo ?: return@LaunchedEffect
         val a = com.huyi.recap.feature.ai.aiAnalyze(t.text)
-        dao.update(t.copy(kind = a?.kind ?: "", aiStatus = if (a != null) "done" else "error"))
+        dao.setAi(t.id, a?.kind ?: "", if (a != null) "done" else "error")
     }
 
     if (screen == "recap") { RecapScreen(every) { screen = "" }; return }
@@ -166,7 +166,7 @@ fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, startOnClipboard: Boolean 
                             TextButton({
                                 scope.launch {
                                     val fid = dao.folderIdByName(s.name) ?: dao.insertFolder(Folder(name = s.name))
-                                    s.items.forEach { dao.update(it.copy(folderId = fid)) }
+                                    dao.setFolder(s.items.map { it.id }, fid)
                                 }
                             }) { Text("Gom") }
                         }
@@ -182,7 +182,7 @@ fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, startOnClipboard: Boolean 
     open?.let { item ->
         DetailScreen(
             item, folders, every.tagsByUse(),
-            onSave = { scope.launch { dao.update(it) } },   // autosave: không đóng màn hình
+            onSave = { scope.launch { dao.saveDetail(it.id, it.text, it.tags, it.imagePath, it.title, it.remindAt, it.folderId, it.status == "open") } },   // autosave: không đóng màn hình
             onDelete = { openId = null; del(item) },
             onBack = { openId = null },
         )

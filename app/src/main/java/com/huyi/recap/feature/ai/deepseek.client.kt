@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal suspend fun chat(sys: String, user: String, maxTokens: Int, json: Boolean): String? {
+internal suspend fun chat(sys: String, user: String, maxTokens: Int, json: Boolean, limit: Int = 500): String? {
     val key = BuildConfig.DEEPSEEK_API_KEY
     if (key.isBlank()) return null
     return withContext(Dispatchers.IO) {
@@ -16,7 +16,7 @@ internal suspend fun chat(sys: String, user: String, maxTokens: Int, json: Boole
             val body = JSONObject().put("model", "deepseek-chat").put("temperature", 0).put("max_tokens", maxTokens)
                 .apply { if (json) put("response_format", JSONObject().put("type", "json_object")) }
                 .put("messages", JSONArray().put(JSONObject().put("role", "system").put("content", sys))
-                    .put(JSONObject().put("role", "user").put("content", user.take(500)))).toString()
+                    .put(JSONObject().put("role", "user").put("content", user.take(limit)))).toString()
             val c = URL("https://api.deepseek.com/chat/completions").openConnection() as HttpURLConnection
             c.connectTimeout = 8000; c.readTimeout = 15000; c.doOutput = true
             c.setRequestProperty("Authorization", "Bearer $key"); c.setRequestProperty("Content-Type", "application/json")

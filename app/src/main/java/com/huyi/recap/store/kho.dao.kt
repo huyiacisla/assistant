@@ -17,6 +17,14 @@ interface KhoDao {
     @Query("SELECT * FROM Item WHERE deletedAt IS NULL AND (remindAt > :now OR (remindCount = 0 AND remindAt > :now - 86400000)) AND status IN ('open','snoozed')") suspend fun upcoming(now: Long): List<Item>
     @Query("UPDATE Item SET remindCount = remindCount + 1 WHERE id = :id") suspend fun bumpRemind(id: Long)
 
+    // Ghi theo cột: không ghi đè cả Item bằng bản chụp cũ (lost update khi AI/popup/sửa tay chạm cùng lúc).
+    @Query("UPDATE Item SET status = :status WHERE id = :id") suspend fun setStatus(id: Long, status: String)
+    @Query("UPDATE Item SET status = :status, remindAt = :at WHERE id = :id") suspend fun snooze(id: Long, status: String, at: Long)
+    @Query("UPDATE Item SET kind = :kind, aiStatus = :aiStatus WHERE id = :id") suspend fun setAi(id: Long, kind: String, aiStatus: String)
+    @Query("UPDATE Item SET folderId = :folderId WHERE id IN (:ids)") suspend fun setFolder(ids: List<Long>, folderId: Long)
+    @Query("UPDATE Item SET text = :text, tags = :tags, imagePath = :img, title = :title, remindAt = :remindAt, folderId = :folderId, status = CASE WHEN :reopen THEN 'open' ELSE status END WHERE id = :id")
+    suspend fun saveDetail(id: Long, text: String, tags: String, img: String?, title: String, remindAt: Long?, folderId: Long?, reopen: Boolean)
+
     @Query("UPDATE Item SET deletedAt = :ts WHERE id = :id") suspend fun softDelete(id: Long, ts: Long)
     @Query("UPDATE Item SET deletedAt = NULL WHERE id = :id") suspend fun restore(id: Long)
     @Query("SELECT * FROM Item WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC") fun trash(): Flow<List<Item>>

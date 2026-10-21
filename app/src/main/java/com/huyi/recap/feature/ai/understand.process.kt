@@ -47,8 +47,12 @@ suspend fun aiClean(text: String): String? {
         "2) sửa lỗi nghe nhầm, dấu thanh, chính tả, viết hoa, dấu câu cho đúng nghĩa theo ngữ cảnh. " +
         "Đây là ghi chú việc cá nhân (họp, gọi điện, mua sắm, nhắc giờ, tiền điện nước); ưu tiên từ hợp ngữ cảnh đó (vd 'học với anh Nam' → 'họp với anh Nam' nếu có giờ họp; 'cho bé' không phải 'cho bữa'). " +
         "KHÔNG thêm ý, KHÔNG tóm tắt, KHÔNG đổi nghĩa, KHÔNG gộp/tách câu hay đổi cụm từ đúng, giữ nguyên số/giờ/tên riêng. Chỉ trả văn bản đã sửa, không lời dẫn; nếu toàn tạp âm trả chuỗi rỗng."
-    return chat(sys, text, 400, false)?.trim()
+    if (!cleanable(text)) return null   // dài quá ⇒ giữ chữ gốc, không để chat() cắt đuôi rồi thay vào
+    return chat(sys, text, 1200, false, CLEAN_MAX)?.trim()
 }
+
+internal const val CLEAN_MAX = 1500
+internal fun cleanable(text: String) = text.length <= CLEAN_MAX
 
 /** Sau khi nghe giọng nói: AI nói lại ngắn gọn điều nó hiểu (việc gì, khi nào) để người dùng soát. Lỗi/không khóa → null. */
 suspend fun aiRecap(text: String): String? {

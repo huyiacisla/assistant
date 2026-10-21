@@ -50,6 +50,8 @@ android {
     }
 }
 
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
 dependencies {
     testImplementation("junit:junit:4.13.2")
     implementation(platform(libs.compose.bom))

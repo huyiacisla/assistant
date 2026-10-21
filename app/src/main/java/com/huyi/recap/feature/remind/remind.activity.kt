@@ -54,9 +54,9 @@ class RemindActivity : ComponentActivity() {
                     }
                 }
             },
-            confirmButton = { TextButton({ act { d -> cancelRemind(this, it.id); d.update(it.copy(status = Status.Done.db)) } }) { Text("Xong") } },
+            confirmButton = { TextButton({ act { d -> cancelRemind(this, it.id); d.setStatus(it.id, Status.Done.db) } }) { Text("Xong") } },
             dismissButton = {
-                TextButton({ act { d -> val at = System.currentTimeMillis() + 3_600_000; d.update(it.copy(status = Status.Snoozed.db, remindAt = at)); scheduleRemind(this, it.id, at, it.text) } }) { Text("Hoãn 1 giờ") }
+                TextButton({ act { d -> val at = System.currentTimeMillis() + 3_600_000; d.snooze(it.id, Status.Snoozed.db, at); scheduleRemind(this, it.id, at, it.text) } }) { Text("Hoãn 1 giờ") }
                 TextButton({ finish() }) { Text("Đóng") }
             })
     }

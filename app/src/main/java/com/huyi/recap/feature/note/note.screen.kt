@@ -104,9 +104,9 @@ fun NoteScreen(dao: KhoDao, notes: List<Item>, f: NoteFilterState, onOpen: (Long
         val setStatus = { it: Item, s: String ->
             scope.launch {
                 when (Status.of(s)) {
-                    Status.Done, Status.Ended -> { cancelRemind(appCtx, it.id); dao.update(it.copy(status = s)) }
-                    Status.Snoozed -> { val at = System.currentTimeMillis() + 3_600_000; dao.update(it.copy(status = s, remindAt = at)); scheduleRemind(appCtx, it.id, at, it.text) }
-                    else -> { dao.update(it.copy(status = Status.Open.db)); it.remindAt?.takeIf { t -> t > System.currentTimeMillis() }?.let { t -> scheduleRemind(appCtx, it.id, t, it.text) } }
+                    Status.Done, Status.Ended -> { cancelRemind(appCtx, it.id); dao.setStatus(it.id, s) }
+                    Status.Snoozed -> { val at = System.currentTimeMillis() + 3_600_000; dao.snooze(it.id, s, at); scheduleRemind(appCtx, it.id, at, it.text) }
+                    else -> { dao.setStatus(it.id, Status.Open.db); it.remindAt?.takeIf { t -> t > System.currentTimeMillis() }?.let { t -> scheduleRemind(appCtx, it.id, t, it.text) } }
                 }
             }
         }

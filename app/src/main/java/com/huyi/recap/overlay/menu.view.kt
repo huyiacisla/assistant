@@ -35,7 +35,7 @@ internal fun OverlayService.openMenu() {
     val items = listOf<MenuItem>(
         MenuItem("Chụp & Lưu", R.drawable.ic_camera, Tok.Red.toArgb()) {
             val a = a11y()
-            if (a != null) { OverlayService.setBubbleVisible(false); Handler(Looper.getMainLooper()).postDelayed({ a.shoot() }, 250) }
+            if (a != null) { val h = Handler(Looper.getMainLooper()); h.post { OverlayService.setBubbleVisible(false) }; h.postDelayed({ a.shoot() }, 250) }   // post: chạy sau closeMenu() (nó đặt bubble hiện lại)
             else startActivity(Intent(this, CaptureActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         },
         MenuItem("Ghi chú nhanh", R.drawable.ic_mic, Tok.Blue.toArgb()) { startActivity(Intent(this, QuickNoteActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },

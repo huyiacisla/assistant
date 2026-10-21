@@ -112,6 +112,7 @@ internal fun TrashScreen(dao: KhoDao, onBack: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val cs = MaterialTheme.colorScheme
     val list by dao.trash().collectAsState(emptyList())
+    var confirm by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Item?>(null) }   // xoá vĩnh viễn phải qua hộp xác nhận
     Scaffold(containerColor = cs.background, topBar = {
         androidx.compose.material3.TopAppBar(
             title = { Text("Thùng rác", fontWeight = FontWeight.SemiBold) },
@@ -127,7 +128,7 @@ internal fun TrashScreen(dao: KhoDao, onBack: () -> Unit) {
                     val left = (TRASH_DAYS - (System.currentTimeMillis() - (it.deletedAt ?: 0)) / 86_400_000L).coerceAtLeast(0)
                     SwipeCard(RoundedCornerShape(22.dp), Modifier.animateItem(),
                         right = SwipeAct(Icons.Outlined.Restore, "Khôi phục", Color(0xFF2E7D32)) { scope.launch { restoreItem(ctx, dao, it) } },
-                        left = SwipeAct(Icons.Outlined.DeleteForever, "Xoá vĩnh viễn", Tok.Red) { scope.launch { purge(dao, it) } },
+                        left = SwipeAct(Icons.Outlined.DeleteForever, "Xoá vĩnh viễn", Tok.Red) { confirm = it },
                     ) {
                     Card(Modifier.fillMaxWidth(), RoundedCornerShape(22.dp), CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(1.dp)) {
                         val title = it.title.ifBlank { it.text.lineSequence().firstOrNull { l -> l.isNotBlank() }?.trim() ?: (if (it.imagePath != null) "Ảnh" else "(trống)") }
@@ -144,13 +145,19 @@ internal fun TrashScreen(dao: KhoDao, onBack: () -> Unit) {
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 TrashAct(Icons.Outlined.RestoreFromTrash, "Khôi phục", Color(0xFF2E7D32)) { scope.launch { restoreItem(ctx, dao, it) } }
-                                TrashAct(Icons.Outlined.DeleteOutline, "Xoá vĩnh viễn", Tok.Red) { scope.launch { purge(dao, it) } }
+                                TrashAct(Icons.Outlined.DeleteOutline, "Xoá vĩnh viễn", Tok.Red) { confirm = it }
                             }
                         }
                     }
                     }
                 }
             }
+        }
+        confirm?.let { d ->
+            androidx.compose.material3.AlertDialog(onDismissRequest = { confirm = null },
+                title = { Text("Xoá vĩnh viễn?") }, text = { Text("Không thể khôi phục, kể cả ảnh và ghi âm đính kèm.") },
+                confirmButton = { androidx.compose.material3.TextButton({ scope.launch { purge(dao, d) }; confirm = null }) { Text("Xoá", color = Tok.Red) } },
+                dismissButton = { androidx.compose.material3.TextButton({ confirm = null }) { Text("Huỷ") } })
         }
     }
 }
