@@ -161,7 +161,7 @@ fun SettingTab(all: List<Item>, trashCount: Int, onTrash: () -> Unit, onBubble: 
             scope.launch {
                 busy = true
                 runCatching {
-                    prefs.edit().putString("email", com.huyi.recap.sync.DriveAuth.email(t)).apply(); drive = prefs.getString("email", null)
+                    prefs.edit().putString("email", com.huyi.recap.sync.DriveAuth.email(t)).putBoolean("reauth", false).apply(); drive = prefs.getString("email", null)
                     if (prefs.getBoolean("restore", false)) {
                         val (n, img) = com.huyi.recap.sync.DriveSync.restore(ctx, t, com.huyi.recap.store.Db.get(ctx).dao())
                         toast("Đã khôi phục $n mục mới, $img ảnh")
@@ -180,6 +180,7 @@ fun SettingTab(all: List<Item>, trashCount: Int, onTrash: () -> Unit, onBubble: 
         val fmt = { ms: Long -> java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(ms) }
         SettingRow(Icons.Outlined.Sync, "Google Drive",
             when { busy -> "Đang sao lưu…"; drive == null -> "Chưa kết nối · bấm để đăng nhập"
+                drive != null && prefs.getBoolean("reauth", false) -> "Hết hạn đăng nhập · bấm để đăng nhập lại"
                 else -> "Đã kết nối · $drive · " + (if (last > 0) "sao lưu ${fmt(last)}" else "bấm để sao lưu") }) {
             if (!busy) { prefs.edit().putBoolean("pending", drive != null).apply(); com.huyi.recap.sync.DriveAuth.authorize(ctx, { consent.launch(it) }, onToken, toast) }
         }

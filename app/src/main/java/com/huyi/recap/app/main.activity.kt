@@ -9,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.huyi.recap.core.theme.RecapTheme
@@ -18,18 +17,20 @@ import com.huyi.recap.overlay.OverlayService
 import com.huyi.recap.store.Db
 
 class MainActivity : ComponentActivity() {
-    private var nav by mutableStateOf(0)   // tăng mỗi lần menu nổi gửi intent ⇒ dựng lại KhoScreen với "go" mới (không recreate: HyperOS giữ intent cũ)
+    private var nav by mutableStateOf(0)   // tăng mỗi lần menu nổi gửi intent mới (không recreate: HyperOS giữ intent cũ)
+    private var go by mutableStateOf<String?>(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= 33) registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
             .launch(android.Manifest.permission.POST_NOTIFICATIONS)
         val dao = Db.get(this).dao()
-        setContent { RecapTheme { key(nav) { KhoScreen(dao, ::startBubble, intent.getBooleanExtra("clip", false), intent.getStringExtra("go")) } } }
+        go = intent.getStringExtra("go")
+        setContent { RecapTheme { KhoScreen(dao, ::startBubble, go, nav) } }
     }
 
-    override fun onNewIntent(intent: Intent) {   // app đang mở: menu nổi gửi "go" mới → dựng lại để mở đúng tab
-        super.onNewIntent(intent); setIntent(intent); nav++
+    override fun onNewIntent(intent: Intent) {   // app đang mở: menu nổi gửi "go" mới → KhoScreen đổi tab/màn, không dựng lại (giữ bộ lọc)
+        super.onNewIntent(intent); setIntent(intent); go = intent.getStringExtra("go"); nav++
     }
 
     private fun startBubble() {

@@ -10,13 +10,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /** Sao lưu Drive nền: token im lặng nếu đã cấp quyền; cần đồng ý lại (hết hạn Testing 7 ngày) ⇒ bỏ lượt, bật lại bằng tay. */
 class BackupWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ctx, p) {
     override suspend fun doWork(): Result {
+        val prefs = applicationContext.getSharedPreferences("drive", Context.MODE_PRIVATE)
+        val expired = { prefs.edit().putBoolean("reauth", true).apply(); Result.failure() }   // Cài đặt hiện "Hết hạn đăng nhập"; thử lại vô ích
         val token = suspendCancellableCoroutine<String?> { c ->
             DriveAuth.authorize(applicationContext, { c.resume(null) }, { c.resume(it) }, { c.resume(null) })
-        } ?: return Result.failure()
+        } ?: return expired()
         return runCatching { DriveSync.backup(token, Db.get(applicationContext).dao().allRows()) }.fold({
-            applicationContext.getSharedPreferences("drive", Context.MODE_PRIVATE).edit().putLong("last", System.currentTimeMillis()).apply()
+            prefs.edit().putLong("last", System.currentTimeMillis()).putBoolean("reauth", false).apply()
             Result.success()
-        }, { Result.retry() })
+        }, { if (it is DriveAuthExpired) expired() else Result.retry() })
     }
 
     companion object {

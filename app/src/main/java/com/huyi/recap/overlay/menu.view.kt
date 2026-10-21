@@ -41,6 +41,7 @@ internal fun OverlayService.openMenu() {
         MenuItem("Ghi chú nhanh", R.drawable.ic_mic, Tok.Blue.toArgb()) { startActivity(Intent(this, QuickNoteActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
         MenuItem("Sao chép", R.drawable.ic_clipboard, Tok.Green.toArgb()) { startActivity(Intent(this, MainActivity::class.java).putExtra("go", "clip").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)) },
         MenuItem("Recap", R.drawable.ic_sparkle, Tok.Purple.toArgb()) { startActivity(Intent(this, MainActivity::class.java).putExtra("go", "cards").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)) },
+        MenuItem("Thống kê", R.drawable.ic_bolt, Tok.Ink2.toArgb()) { startActivity(Intent(this, MainActivity::class.java).putExtra("go", "recap").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)) },
         MenuItem("Ghi chú", R.drawable.ic_note, Tok.Orange.toArgb()) { startActivity(Intent(this, MainActivity::class.java).putExtra("go", "note").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)) },
     )
     fun px(v: Int) = (v * dp).toInt()

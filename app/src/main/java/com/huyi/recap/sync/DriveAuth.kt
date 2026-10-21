@@ -40,8 +40,10 @@ object DriveAuth {
     /** Email chủ Drive (kiểm tra token dùng được). */
     suspend fun email(token: String): String = withContext(Dispatchers.IO) {
         val c = URL("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)").openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000; c.readTimeout = 60_000
         c.setRequestProperty("Authorization", "Bearer $token")
         try {
+            if (c.responseCode == 401) throw DriveAuthExpired()
             if (c.responseCode != 200) error("Drive ${c.responseCode}")
             JSONObject(c.inputStream.bufferedReader().readText()).getJSONObject("user").getString("emailAddress")
         } finally { c.disconnect() }

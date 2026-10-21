@@ -102,9 +102,10 @@ class QuickNoteActivity : ComponentActivity() {
     internal fun startRec() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { askMic.launch(Manifest.permission.RECORD_AUDIO); return }
         player?.release(); player = null; playing = -2
-        val r = android.media.AudioRecord(android.media.MediaRecorder.AudioSource.MIC, 16000, android.media.AudioFormat.CHANNEL_IN_MONO,
-            android.media.AudioFormat.ENCODING_PCM_16BIT, 16000 * 2)
-        pcm.reset(); seg0 = 0; heard = false; firstV = -1; lastV = 0; voicedN = 0; rec = r; r.startRecording(); listening = true; t0 = android.os.SystemClock.elapsedRealtime(); status = "Đang nghe…"
+        val fmt = android.media.AudioFormat.ENCODING_PCM_16BIT; val ch = android.media.AudioFormat.CHANNEL_IN_MONO
+        val r = android.media.AudioRecord(android.media.MediaRecorder.AudioSource.MIC, 16000, ch, fmt, maxOf(16000 * 2, android.media.AudioRecord.getMinBufferSize(16000, ch, fmt)))
+        if (r.state != android.media.AudioRecord.STATE_INITIALIZED || runCatching { r.startRecording() }.isFailure || r.recordingState != android.media.AudioRecord.RECORDSTATE_RECORDING) { r.release(); status = "Mic không khả dụng — thử lại"; return }   // mic bận/bị chiếm: không crash
+        pcm.reset(); seg0 = 0; heard = false; firstV = -1; lastV = 0; voicedN = 0; rec = r; listening = true; t0 = android.os.SystemClock.elapsedRealtime(); status = "Đang nghe…"
         committed.clear(); srFailed = false; openSr()
         Thread {
             val buf = ByteArray(3200)
@@ -126,6 +127,7 @@ class QuickNoteActivity : ComponentActivity() {
                 val quiet = if (voiced > 0) now - voiced > 2500 else now - t0 > 8000   // nói rồi im 3s → dừng; 8s chưa nói gì → bỏ
                 if (quiet) { runOnUiThread { if (rec === r) { if (voiced > 0) stopRec() else cancelRec() } }; break }
             }
+            if (rec === r) runOnUiThread { if (rec === r) stopRec() }   // hết 60s: dừng như khi im lặng, không để UI kẹt "Đang nghe"
         }.start()
     }
 
@@ -246,6 +248,11 @@ class QuickNoteActivity : ComponentActivity() {
          lifecycleScope.launch { understand(t) } } }
 
     internal fun dropAudio() { clips.removeAll { it.pcm.isNotEmpty() }; rewriteAudio() }   // xoá ghi âm = xoá luôn chữ của các clip có tiếng; chữ gõ tay giữ
+
+    override fun onStop() {   // rời app/khoá màn hình: mic không chạy nền; giữ phần đã nói (stopRec bỏ nếu chỉ là tiếng động)
+        if (rec != null) stopRec()
+        super.onStop()
+    }
 
     override fun onDestroy() {
         rec?.let { it.stop(); it.release() }; rec = null; killSr(); player?.release(); player = null

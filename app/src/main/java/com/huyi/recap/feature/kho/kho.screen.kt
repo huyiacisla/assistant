@@ -99,11 +99,11 @@ private const val UNSORTED = -2L
 
 @OptIn(ExperimentalCoroutinesApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, startOnClipboard: Boolean = false, go: String? = null) {
+fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, go: String? = null, goTick: Int = 0) {
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
     var query by remember { mutableStateOf("") }
-    var tab by remember { mutableStateOf(if (go == "clip" || startOnClipboard) 2 else if (go == "cards") 1 else 0) }   // go: clip → Clipboard · cards → tab Recap (danh sách card) · note → Note
+    var tab by remember { mutableStateOf(if (go == "clip") 2 else if (go == "cards") 1 else 0) }   // go: clip → Clipboard · cards → tab Recap (danh sách card) · recap → Thống kê · note → Note
     var filter by remember { mutableStateOf(ALL) }
     val appCtx = androidx.compose.ui.platform.LocalContext.current
     val nf = rememberNoteFilter()   // state lọc trang Note (notefilter.state.kt)
@@ -125,6 +125,8 @@ fun KhoScreen(dao: KhoDao, onStartBubble: () -> Unit, startOnClipboard: Boolean 
     val open = every.firstOrNull { it.id == openId }   // luôn là bản mới nhất trong DB (xoá ⇒ tự thoát chi tiết)
     var screen by remember { mutableStateOf(if (go == "recap") "recap" else "") }
     var organize by remember { mutableStateOf(go == "organize") }
+    // menu nổi gửi intent khi app đang mở: chỉ đổi tab/màn, giữ nguyên bộ lọc (không dựng lại KhoScreen)
+    LaunchedEffect(goTick) { if (goTick > 0) { tab = when (go) { "clip" -> 2; "cards" -> 1; else -> 0 }; screen = if (go == "recap") "recap" else ""; openId = null; viewing = null } }
 
     // Folder bị xoá khi đang lọc ⇒ quay về Tất cả
     LaunchedEffect(folders) { if (filter >= 0 && folders.none { it.id == filter }) filter = ALL }

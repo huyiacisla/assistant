@@ -11,7 +11,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Sao lưu 1 chiều lên Drive: thư mục "Recap" chứa recap.json (ghi đè) + ảnh (bỏ qua ảnh đã có theo tên). */
+/** Token hết hạn / bị thu hồi (401): thử lại vô ích, phải đăng nhập lại bằng tay. */
+class DriveAuthExpired : Exception("Drive hết hạn đăng nhập")
+
+/** Sao lưu 1 chiều lên Drive: thư mục "Recap" chứa recap.json (gộp với bản cũ) + ảnh (bỏ qua ảnh đã có theo tên). */
 object DriveSync {
     private const val API = "https://www.googleapis.com"
 
@@ -83,7 +86,7 @@ object DriveSync {
         val c = URL("$API/drive/v3/files/$id?alt=media").openConnection() as HttpURLConnection
         c.connectTimeout = 15_000; c.readTimeout = 60_000
         c.setRequestProperty("Authorization", "Bearer $t")
-        try { if (c.responseCode != 200) error("Drive ${c.responseCode}"); return c.inputStream.readBytes() } finally { c.disconnect() }
+        try { if (c.responseCode == 401) throw DriveAuthExpired(); if (c.responseCode != 200) error("Drive ${c.responseCode}"); return c.inputStream.readBytes() } finally { c.disconnect() }
     }
 
     private fun q(s: String) = URLEncoder.encode(s, "UTF-8")
@@ -96,6 +99,7 @@ object DriveSync {
         c.setRequestProperty("Authorization", "Bearer $token")
         try {
             if (body != null) { c.doOutput = true; c.setRequestProperty("Content-Type", ctype); c.outputStream.use { it.write(body) } }
+            if (c.responseCode == 401) throw DriveAuthExpired()
             if (c.responseCode !in 200..299) error("Drive ${c.responseCode} ${c.errorStream?.bufferedReader()?.readText()?.take(120)}")
             return JSONObject(c.inputStream.bufferedReader().readText())
         } finally { c.disconnect() }
