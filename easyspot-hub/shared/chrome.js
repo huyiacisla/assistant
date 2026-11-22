@@ -191,7 +191,7 @@ function acctHTML(){const u=me(),blocked=badRole(),ini=u.name.split(' ').map(x=>
  const vis=`${ini} ${u.name} ${roleLabel}`;
  const avLabel=COMPANY?`Account menu, ${vis}, ${COMPANY}`:`Account menu, ${vis}`;
  return `<div class="hdr-acct" id="hdrAcct"><button type="button" class="av-btn" id="avBtn" data-k="av-btn" aria-label="${esc(avLabel)}" aria-haspopup="menu" aria-expanded="false" aria-controls="avMenu"><span class="av" aria-hidden="true">${ini}</span> <span class="who" aria-hidden="true"><b>${esc(u.name)}</b> <span>${ROLES[u.role]||'Not set up'}</span></span><span class="chev" aria-hidden="true">${ic('chevron-down',16)}</span></button>
- <div class="av-pop" id="avPop" hidden><div class="am-hd" aria-hidden="true"><span class="av">${ini}</span><div><b>${esc(u.name)}</b><span>${ROLES[u.role]||'Not set up'}</span>${COMPANY?`<span class="am-co">${esc(COMPANY)}</span>`:''}</div></div><div class="av-menu" id="avMenu" role="menu" aria-label="Account">${blocked?'':it('miProfile','mi-profile','user-round','Account profile')+it('miSettings','mi-settings','settings','Settings')}${it('miSignout','mi-signout','log-out','Sign out')}</div></div></div>`}
+ <div class="av-pop" id="avPop" hidden><div class="am-hd" aria-hidden="true"><span class="av">${ini}</span><div><b>${esc(u.name)}</b><span>${ROLES[u.role]||'Not set up'}</span>${COMPANY?`<span class="am-co">${esc(COMPANY)}</span>`:''}</div></div><div class="av-menu" id="avMenu" role="menu" aria-label="Account">${blocked?'':it('miProfile','mi-profile','user-round','Account profile')+it('miSettings','mi-settings','settings','Settings')}${it('demoBtn','demo-btn','sparkles','Preview options')}${it('miSignout','mi-signout','log-out','Sign out')}</div></div></div>`}
 
 function topbarHTML(){
  const n=myNotes().filter(x=>!x.read).length;
@@ -200,9 +200,8 @@ function topbarHTML(){
 
 function sessionHTML(){
  const out=S.session==='out';
- if(out&&typeof landingHTML==='function')return landingHTML();
- const signed=typeof SIGNOUT_LINE==='string'?SIGNOUT_LINE:"You're signed out of every EasySpot app.";
- return `<main class="signedout" id="main" tabindex="-1"><div class="card" id="${out?'signedOut':'sessionEnded'}"><span class="sb-logo" style="margin:0 auto 12px;width:48px;height:48px">${ic(out?'log-out':'clock',22)}</span><h1>${out?"You're signed out":'Your session ended'}</h1><p class="muted">${out?signed:'Sign in again to pick up where you left off.'}</p><button type="button" class="btn btn-primary btn-block" id="signIn" data-k="sign-in">${out?'Sign in':'Sign in again'}</button><p class="small muted">Demo sign-in, no password needed (Sample).</p></div></main>`;
+  const signed=typeof SIGNOUT_LINE==='string'?SIGNOUT_LINE:"You're signed out of every EasySpot app.";
+ return `<main class="signedout" id="main" tabindex="-1"><div class="card" id="${out?'signedOut':'sessionEnded'}"><span class="sb-logo" style="margin:0 auto 12px;width:48px;height:48px">${ic(out?'log-out':'clock',22)}</span><h1>${out?"You're signed out":'Your session ended'}</h1><p class="muted">${out?signed:'Sign in again to pick up where you left off.'}</p><button type="button" class="btn btn-primary btn-block" id="signIn" data-k="sign-in">${out?'Log in':'Log in again'}</button></div></main>`;
 }
 
 function ensureShell(){
@@ -245,7 +244,7 @@ function closeAv(ret){const mn=$('#avPop');if(mn&&!mn.hidden){mn.hidden=true;$('
 function openAv(last){const mn=$('#avPop');if(!mn)return;mn.hidden=false;$('#avBtn').setAttribute('aria-expanded','true');const it=[...$('#avMenu').querySelectorAll('[role=menuitem]')];(last?it.at(-1):it[0]).focus()}
 
 function go(v){if(v!=='settings')settingsSaved=false;S.view=v;closeDrawer(false);render();$('#main').focus({preventScroll:true})}
-function signOut(){closeAll();HubContract.markSession(me().id,'out');S.session='out';S.view=S.homeView||'hub';render();$('#signIn').focus()}
+function signOut(){closeAll();HubContract.markSession(me().id,'out');S.session='out';S.view=S.homeView||'hub';uiSave();HubContract.go('index','login')}
 
 /* Notifications travel through the shared store: ea:notes:<topic>:<sender>.
    A page reads the topics it belongs to (NOTE_TOPICS) and writes one outbox per topic it talks to. */
@@ -292,8 +291,8 @@ function helpModal(opener){
 
 function handleChromeClick(t){
  if(t.matches('[data-close]')){closeModal();return true}
- if(t.id==='signIn'){HubContract.markSession(me().id,'in');lastActivity=Date.now();S.session='ok';S.view=S.homeView||'hub';render();$('#main').focus();live('Signed in.');return true}
- if(t.id==='demoBtn'){demoModal(t);return true}
+ if(t.id==='signIn'){HubContract.markSession(me().id,'out');HubContract.go('index','login');return true}
+ if(t.id==='demoBtn'){closeAv(false);demoModal($('#avBtn'));return true}
  if(t.id==='menuBtn'){openDrawer();return true}
  if(t.id==='sbClose'||t.id==='sbScrim'){closeDrawer();return true}
  if(t.id==='themeBtn'){setTheme(theme==='dark'?'light':'dark');render();$('#themeBtn').focus();return true}
@@ -341,5 +340,5 @@ const UI_KEYS=['view','tab','prop','now','accessTab','staffPanel','matrixUser','
 function uiKey(){return 'ea-hub-ui:'+storeRole()}
 function uiSave(){try{const o={};UI_KEYS.forEach(k=>{if(S[k]!==undefined&&S[k]!==null)o[k]=S[k]});sessionStorage.setItem(uiKey(),JSON.stringify(o))}catch(e){}}
 function uiRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(uiKey())||'null')}catch(e){}if(!o||typeof o!=='object')return false;UI_KEYS.forEach(k=>{if(o[k]!==undefined&&k in S&&(S[k]===null||typeof o[k]===typeof S[k]))S[k]=o[k]});if(S.view==='nf')S.view=S.homeView;return true}
-/* A page with a landing (START_SIGNED_OUT) greets a first-time visitor there; the others open signed in. */
-function bootSession(){let seen=true;try{seen=!!localStorage.getItem(HubContract.sessionKey(me().id))}catch(e){}if(HubContract.signedOut(me().id)||(typeof START_SIGNED_OUT!=='undefined'&&START_SIGNED_OUT&&!seen))S.session='out'}
+/* Nobody gets a workspace without signing in at the front door (index.html). Returns false when leaving. */
+function bootSession(){let rec=null;try{rec=localStorage.getItem(HubContract.sessionKey(me().id))}catch(e){}if(rec&&!HubContract.signedOut(me().id))return true;S.session='out';HubContract.go('index','login');return false}

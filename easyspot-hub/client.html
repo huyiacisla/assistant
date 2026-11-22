@@ -13,7 +13,6 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="demo-strip" id="demoStrip" role="region" aria-label="Demo controls"><span class="lbl">Demo · Preview</span><span class="grow"></span><button type="button" class="btn" id="demoBtn" data-k="demo-btn">Options</button></div>
 <div id="app"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
@@ -26,10 +25,8 @@ const GLOBAL_COMPANY=CLIENT_COMPANY;
 <script src="shared/settings.js"></script>
 <script src="shared/chrome.js"></script>
 <script src="shared/hub-view.js"></script>
-<script src="shared/landing.js"></script>
 <script>
 const PROFILE_INTRO='Your details in this Hub.';
-const START_SIGNED_OUT=true;
 const SIGNOUT_LINE="You're signed out of the Hub and every EasySpot app.";
 const hideProfileAsk=u=>u.role==='account_admin';
 const DEFAULT_PROPS=()=>[{k:'lp',name:'Linden Park',id:'prop_101'},{k:'mc',name:'Maple Court',id:'prop_102'}];
@@ -350,11 +347,9 @@ settingsInit(me().id);
 bindShared();
 /* The single-file build has no admin console beside it, so it starts with the sample account. */
 if(window.EA_STANDALONE&&!storeGet(AMC_ENT))loadSample();
-hubBoot();bootSession();
+hubBoot();
 S.offline=navigator.onLine===false;
-render();
-shareReady();
-hubReturn();
+if(bootSession()){render();shareReady();hubReturn()}
 
 </script>
 </body>

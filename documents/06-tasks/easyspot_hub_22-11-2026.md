@@ -43,6 +43,7 @@ Ngoài scope Recap: prototype web riêng, đặt cùng repo theo quyết định
 | 22-11-2026 | Claude | Ops mở theo vai trò: account admin → `client.easyspotops.com`, còn lại → `staff.easyspotops.com` (`launch.urlByRole`); test 63 passed |
 | 22-11-2026 | Claude | Console admin thêm nút mở `admin.easyspotops.com`; mỗi trang vai trò về đúng cửa vào của mình; test 64 passed |
 | 22-11-2026 | Claude | Trang ngoài (landing + đăng nhập) cho EasySpot Applicator; lớp hoàn thiện giao diện Hub (phông, thẻ app canh trái ở màn rộng); `dist/easyspot-applicator.html` 1 tệp độc lập; pop-up bị chặn → có link mở trực tiếp; test 72 passed |
+| 22-11-2026 | Claude | Cửa trước thật: `index.html` (landing, Log in, Sign up, quên mật khẩu) + `shared/auth.js`; tài khoản `client` / `staff` / `admin`, mật khẩu `1234`; trang vai trò bắt buộc đăng nhập; bỏ thanh demo; bản 1 tệp chứa cả 3 workspace; test 87 passed |
 
 ## Retrospective
 | Kết quả | Vấn đề | Bài học |

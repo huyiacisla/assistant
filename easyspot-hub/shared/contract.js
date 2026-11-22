@@ -80,5 +80,11 @@
   try{const k=sessionKey(userId),o=JSON.parse(root.localStorage.getItem(k)||'null')||{};o[what]=Date.now();root.localStorage.setItem(k,JSON.stringify(o))}catch(e){}
  }
 
- root.HubContract={VERSION,FIELDS,REQUIRED,build,read,backUrl,parseReturn,notifyHub,safeUrl,sessionKey,signedOut,markSession};
+ const PAGES=['index','client','staff','admin'];
+ function go(page,hash){
+  if(PAGES.indexOf(page)<0)return;
+  if(root.EA_FRAMED&&root.parent!==root){root.parent.postMessage({eaNav:page,hash:hash||''},'*');return}
+  root.location.assign(page+'.html'+(hash?'#'+hash:''));
+ }
+ root.HubContract={go,PAGES,VERSION,FIELDS,REQUIRED,build,read,backUrl,parseReturn,notifyHub,safeUrl,sessionKey,signedOut,markSession};
 })(window);

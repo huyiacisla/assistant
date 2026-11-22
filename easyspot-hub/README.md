@@ -13,6 +13,20 @@ Dữ liệu mẫu, lưu `localStorage`, đồng bộ giữa các vai trò qua `B
 
 Mở bằng `file://` vẫn hiển thị, nhưng đồng bộ giữa các khung phụ thuộc trình duyệt → dùng HTTP.
 
+## Đăng nhập (mẫu)
+
+| Username | Mật khẩu | Vào |
+|---|---|---|
+| `client` | `1234` | Hub account admin (`client.html`) |
+| `staff` | `1234` | Hub nhân viên (`staff.html`) |
+| `admin` | `1234` | Console EasySpot (`admin.html`) |
+
+- Một cửa cho mọi người: tài khoản quyết định workspace mở ra. Mở thẳng trang vai trò khi chưa đăng nhập → bị đưa về `index.html#login`.
+- Bản mẫu thiết kế: tài khoản nằm ngay trong `shared/auth.js`, ai xem mã nguồn cũng thấy. Không lưu mật khẩu. Bản thật thay `authenticate()` bằng dịch vụ định danh.
+- Sign up dừng ở "Check your email" (không gửi thư); đăng nhập bằng email đó → nhắc xác minh.
+- `preview.html` (xem 3 vai trò cùng lúc) tự đăng nhập 3 người mẫu.
+- "Preview options" (đổi dữ liệu mẫu, giả lỗi) nằm trong menu tài khoản, không còn thanh vàng.
+
 ## Tệp
 
 | Tệp | Vai trò |
@@ -21,8 +35,9 @@ Mở bằng `file://` vẫn hiển thị, nhưng đồng bộ giữa các khung 
 | `shared/hub-view.js` | **Hub thuần**: lưới app, ghim/gần đây, lọc, `launchApp()` |
 | `shared/contract.js` | **Hub Context Contract v1**: tệp duy nhất app con cần |
 | `shared/settings.js` | Cài đặt cá nhân + khung trang Settings |
-| `shared/landing.js` | Trang ngoài của EasySpot Applicator (trước đăng nhập); chỉ `client.html` nạp |
-| `tools/build-standalone.js` → `dist/easyspot-applicator.html` | Gộp `client.html` + mọi thứ nó nạp thành **1 tệp** mở ở đâu cũng được |
+| `index.html` | **Cửa trước**: trang ngoài, Log in, Sign up, quên mật khẩu (`#login · #signup · #forgot`) |
+| `shared/auth.js` | Tài khoản mẫu + kiểm đăng nhập, khóa tạm sau 5 lần sai, đăng ký chờ xác minh |
+| `tools/build-standalone.js` → `dist/easyspot-applicator.html` | Gộp cửa trước + 3 workspace thành **1 tệp** mở ở đâu cũng được |
 | `shared/chrome.js` | Khung vỏ: sidebar, topbar, tìm kiếm, modal, kho đồng bộ, thông báo |
 | `shared/hub.css` | Token + style dùng chung (Hub và app con) |
 | `client.html` | Hub của account admin + khu quản trị (App access, Staff, Organization) |
@@ -101,8 +116,7 @@ Quyền đọc/ghi từng khóa: `STORE_READ / STORE_WRITE / STORE_FROM` ở đ�
 
 ## Giới hạn đã biết
 
-- Lần đầu mở `client.html` → trang ngoài, bấm "Continue as …" mới vào Hub. `staff.html` / `admin.html` vẫn mở thẳng.
-- Bản 1 tệp không có console admin đi kèm → tự nạp tài khoản mẫu, bỏ link sang `staff.html` / `admin.html`.
+- Bản 1 tệp: 3 workspace nằm trong tệp, mở trong khung phủ toàn trang sau khi đăng nhập; client tự nạp dữ liệu mẫu lần đầu.
 - Phông Inter + Space Grotesk tải từ Google Fonts; ngoại tuyến thì rơi về phông hệ thống.
 
 - Bản xem trước: không xác thực thật; app con tin ngữ cảnh trên URL. Bản thật phải kiểm quyền phía máy chủ.

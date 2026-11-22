@@ -46,9 +46,9 @@ Internal preview only. Not for customers.
 </div>
 </nav>
 <main id="previewMain">
-<div class="role-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin"><iframe name="adminFrame" id="adminFrame" src="admin.html" title="Admin"></iframe></div>
-<div class="role-panel" id="panel-client" role="tabpanel" aria-labelledby="tab-client" hidden><iframe name="clientFrame" id="clientFrame" src="client.html" title="Client"></iframe></div>
-<div class="role-panel" id="panel-staff" role="tabpanel" aria-labelledby="tab-staff" hidden><iframe name="staffFrame" id="staffFrame" src="staff.html" title="Staff"></iframe></div>
+<div class="role-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin"><iframe name="adminFrame" id="adminFrame" data-src="admin.html" title="Admin"></iframe></div>
+<div class="role-panel" id="panel-client" role="tabpanel" aria-labelledby="tab-client" hidden><iframe name="clientFrame" id="clientFrame" data-src="client.html" title="Client"></iframe></div>
+<div class="role-panel" id="panel-staff" role="tabpanel" aria-labelledby="tab-staff" hidden><iframe name="staffFrame" id="staffFrame" data-src="staff.html" title="Staff"></iframe></div>
 </main>
 <script>
 (function(){
@@ -83,6 +83,8 @@ Internal preview only. Not for customers.
     e.preventDefault();
     select(ROLES[i],{focus:true});
   });
+  ['u_001','u_002','u_010'].forEach(function(id){try{var k='ea-session:'+id,o=JSON.parse(localStorage.getItem(k)||'null')||{};o.in=Date.now();localStorage.setItem(k,JSON.stringify(o))}catch(e){}});
+  [].forEach.call(document.querySelectorAll('iframe[data-src]'),function(f){f.src=f.getAttribute('data-src')});
   select('admin');
 })();
 </script>

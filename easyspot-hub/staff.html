@@ -13,7 +13,6 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="demo-strip" id="demoStrip" role="region" aria-label="Demo controls"><span class="lbl">Demo · Preview</span><span class="grow"></span><button type="button" class="btn" id="demoBtn" data-k="demo-btn">Options</button></div>
 <div id="app"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
@@ -195,11 +194,9 @@ function searchIndex(){
 
 settingsInit(me().id);
 bindShared();
-hubBoot();bootSession();
+hubBoot();
 S.offline=navigator.onLine===false;
-render();
-shareReady();
-hubReturn();
+if(bootSession()){render();shareReady();hubReturn()}
 
 </script>
 </body>
