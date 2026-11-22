@@ -7,10 +7,10 @@ const APP_REGISTRY=[
   keywords:'parking permits guest passes entries tow spots',
   highlights:['Guest passes and permits','Entries and open spots','Tow requests'],
   lifecycle:'live',
-  /* The real product, one entrance per kind of person: account admins go to client., everyone else to staff.
+  /* The real product, one entrance per kind of person: account admins go to client., EasySpot's own admins to admin., everyone else to staff.
      It refuses to be framed (X-Frame-Options: DENY), so it opens in its own tab.
      Sample of the receiving side: apps/ops.html. */
-  launch:{type:'url',url:'https://staff.easyspotops.com/',urlByRole:{account_admin:'https://client.easyspotops.com/'},target:'blank',params:['app','companyId','propertyId','role','userId','theme','locale','returnUrl']},
+  launch:{type:'url',url:'https://staff.easyspotops.com/',urlByRole:{account_admin:'https://client.easyspotops.com/',internal_admin:'https://admin.easyspotops.com/'},target:'blank',params:['app','companyId','propertyId','role','userId','theme','locale','returnUrl']},
   requiresSingleProperty:true,allowedRoles:null},
  {id:'home',slug:'home',name:'EasySpotHome',shortName:'Home',category:'Residents',icon:'house',color:'#0F766E',
   description:'Handle building requests faster and make every move-in smooth.',

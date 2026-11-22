@@ -104,7 +104,7 @@ Quyền đọc/ghi từng khóa: `STORE_READ / STORE_WRITE / STORE_FROM` ở đ�
 - Hết phiên do không hoạt động chỉ áp cho Hub; app con chỉ theo "đăng xuất toàn bộ".
 - Tòa nhà: thêm + đổi tên, chưa xóa.
 - Admin "Reset sample data" không xóa yêu cầu client đã gửi (khóa của client) → hiện lại là pending.
-- Chỉ `EasySpotOps` có đích thật: account admin → `https://client.easyspotops.com/`, vai trò khác → `https://staff.easyspotops.com/` (`launch.urlByRole`; tab mới vì trang cấm nhúng iframe); 3 app còn lại `coming_soon`.
+- Chỉ `EasySpotOps` có đích thật: account admin → `https://client.easyspotops.com/`, admin nội bộ → `https://admin.easyspotops.com/` (nút ở sidebar console), vai trò khác → `https://staff.easyspotops.com/` (`launch.urlByRole`; tab mới vì trang cấm nhúng iframe); 3 app còn lại `coming_soon`.
 - Chưa đăng nhập → trang Ops chuyển sang `auth.easyspotops.com/login?next=/`: tham số ngữ cảnh rơi mất ở bước này.
 - `easyspotops.com` chưa đọc contract: tham số ngữ cảnh được gửi kèm nhưng trang bỏ qua, người dùng vẫn đăng nhập + chọn tòa nhà ở đó. Muốn liền mạch: trang Ops gọi `HubContract.read(..., {hubOrigins})`.
 - Khác tên miền → chuông Hub (`notifyHub`) và "đăng xuất toàn bộ" không tới được trang Ops (đều dựa `localStorage`); cần backend/SSO.

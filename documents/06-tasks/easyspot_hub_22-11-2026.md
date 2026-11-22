@@ -41,6 +41,7 @@ Ngoài scope Recap: prototype web riêng, đặt cùng repo theo quyết định
 | 22-11-2026 | Claude | Chặn ký tự đánh dấu trong tên tòa nhà (giờ là dữ liệu người dùng nhập, đồng bộ sang staff) |
 | 22-11-2026 | Claude | Thẻ EasySpotOps trỏ `https://easyspotops.com/` (tab mới: trang cấm iframe); sửa lỗi `window.open` + `noopener` luôn báo bị chặn; contract nhận `hubOrigins` cho app khác tên miền; test 62 passed |
 | 22-11-2026 | Claude | Ops mở theo vai trò: account admin → `client.easyspotops.com`, còn lại → `staff.easyspotops.com` (`launch.urlByRole`); test 63 passed |
+| 22-11-2026 | Claude | Console admin thêm nút mở `admin.easyspotops.com`; mỗi trang vai trò về đúng cửa vào của mình; test 64 passed |
 
 ## Retrospective
 | Kết quả | Vấn đề | Bài học |

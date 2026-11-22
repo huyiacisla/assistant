@@ -144,7 +144,7 @@ function sidebarHTML(){
  const navBtn=(v,label,icn,cnt)=>`<button type="button" class="sb-item" data-k="nav-${v}" data-go="${v}"${S.view===v||(v==='clients'&&S.view==='client')?' aria-current="page"':''}>${ic(icn,18)}<span>${label}</span>${cnt?`<span class="cnt" aria-label="${cnt} pending">${cnt}</span>`:''}</button>`;
  return brandSide('Admin')+
  `${blocked?'':`<div class="sb-ws"><span class="k">Signed in as</span><span class="v">${esc(me().name)} <span class="sample" style="color:#A9B5C9;border-color:#5B6B82">Sample</span></span></div>`}
- <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('clients','Clients','layers',waiting)}</nav>`;
+ <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('clients','Clients','layers',waiting)+`<div class="sb-label">Apps</div>`+APP_REGISTRY.filter(a=>a.launch.urlByRole&&a.launch.urlByRole[me().role]).map(a=>`<button type="button" class="sb-item" data-k="open-${a.id}" data-openapp="${a.id}">${ic(a.icon,18)}<span>${a.name} admin</span><span class="sr-only"> (opens in a new tab)</span></button>`).join('')}</nav>`;
 }
 
 function render(){
@@ -189,6 +189,7 @@ function helpItems(){return [
 ]}
 
 function handleRoleClick(t){
+ if(t.dataset.openapp){const a=appDef(t.dataset.openapp),u=a&&a.launch.urlByRole&&a.launch.urlByRole[me().role];if(!u)return;if(S.offline){live(`You're offline. ${a.name} will open when you're back online.`);return}const w=window.open(u,'_blank');if(!w){live('Your browser blocked the new tab. Allow pop-ups, then try again.');return}try{w.opener=null}catch(e){}closeDrawer(false);live(`${a.name} admin opened in a new tab.`);return}
  if(t.dataset.client){S.view='client';S.client=t.dataset.client;evSeen=new Set();render();$('#main').focus();return}
  if(t.dataset.tog){const [cid,app]=t.dataset.tog.split('|');const c=C(cid);if(!c)return;c.apps[app]=!c.apps[app];emitToggle(cid,app,c.apps[app]);note(`${c.name}: ${A(app).name} is now ${c.apps[app]?'on':'off'}.`,'apps');if(cid===AMC_ID)notify('cli_001','apps',`EasySpot turned ${A(app).name} ${c.apps[app]?'on':'off'} for your company.`);pushShared();render();live(`${A(app).name} for ${c.name}: ${c.apps[app]?'on':'off'}.`);const b=document.querySelector(`[data-k="sw-${cid}-${app}"]`);b&&b.focus();return}
  if(t.dataset.rqok||t.dataset.rqno){const id=t.dataset.rqok||t.dataset.rqno,r=S.reqs.find(x=>x.id===id);if(!r)return;const c=C(r.client);

@@ -72,6 +72,10 @@ const SHOT=process.env.SHOTS||'';
  ok(new URL(stab.url()).origin==='https://staff.easyspotops.com'&&new URL(stab.url()).searchParams.get('role')==='property_manager','staff open the staff entrance of the same app');
  await stab.close();
 
+ const [atab]=await Promise.all([ctx.waitForEvent('page'),admin.click('[data-k="open-ops"]')]);
+ ok(new URL(atab.url()).href==='https://admin.easyspotops.com/','admin console opens the admin entrance');
+ await atab.close();
+
  console.log('Launch: other states');
  await client.click('[data-k="tile-home"]');
  ok(await client.isVisible('#amNotify'),'coming soon: preview with "tell me when ready"');
