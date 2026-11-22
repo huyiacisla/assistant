@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EasySpot internal preview</title>
+<style>
+:root{
+  --bg:#F3F6FA;--fg:#16243D;--fg-2:#334155;--card:#FFFFFF;--border:#CBD5E1;--input-border:#7A8799;
+  --sel:#16243D;--sel-fg:#fff;--banner-bg:#2A1F05;--banner-fg:#FDE68A;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0A0F1C;--fg:#E6EBF3;--fg-2:#C9D3E1;--card:#111827;--border:#33425C;--input-border:#6B7C96;
+    --sel:#E6EBF3;--sel-fg:#16243D;--banner-bg:#2A1F05;--banner-fg:#FDE68A;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.4}
+body{display:flex;flex-direction:column;min-height:100%;min-width:0;overflow:hidden}
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.preview-banner{flex:none;padding:6px 12px;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));background:var(--banner-bg);color:var(--banner-fg);font-size:12.5px;font-weight:600;text-align:center}
+nav.preview-nav{flex:none;background:var(--card);border-bottom:1px solid var(--border)}
+#roleTabs{display:flex;gap:8px;flex-wrap:wrap;padding:8px;padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+#previewMain{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column}
+.role-tab{flex:1 1 88px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:0;padding:8px 10px;border:2px solid var(--input-border);border-radius:12px;background:var(--card);color:var(--fg);font-weight:700;cursor:pointer;text-align:center}
+.role-tab .mark{display:none;width:16px;height:16px;flex:none}
+.role-tab[aria-selected="true"]{background:var(--sel);color:var(--sel-fg);border-color:var(--sel);font-weight:800;text-decoration:underline;text-underline-offset:4px;box-shadow:inset 0 -3px 0 var(--sel-fg)}
+.role-tab[aria-selected="true"] .mark{display:inline-block}
+.role-tab:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.role-panel{flex:1 1 auto;min-height:0;min-width:0;position:relative}
+.role-panel[hidden]{display:none !important}
+.role-panel iframe{display:block;width:100%;height:100%;border:0;background:var(--card)}
+</style>
+</head>
+<body>
+<header class="preview-banner">
+<h1 class="vh">EasySpot internal preview</h1>
+Internal preview only. Not for customers.
+</header>
+<nav class="preview-nav" aria-label="Role to preview">
+<div id="roleTabs" role="tablist" aria-label="Role to preview">
+  <button type="button" class="role-tab" role="tab" id="tab-admin" data-role-tab="admin" aria-controls="panel-admin" aria-selected="true" tabindex="0"><svg class="mark" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg><span>Admin</span></button>
+  <button type="button" class="role-tab" role="tab" id="tab-client" data-role-tab="client" aria-controls="panel-client" aria-selected="false" tabindex="-1"><svg class="mark" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg><span>Client</span></button>
+  <button type="button" class="role-tab" role="tab" id="tab-staff" data-role-tab="staff" aria-controls="panel-staff" aria-selected="false" tabindex="-1"><svg class="mark" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg><span>Staff</span></button>
+</div>
+</nav>
+<main id="previewMain">
+<div class="role-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin"><iframe name="adminFrame" id="adminFrame" data-src="admin.html" title="Admin"></iframe></div>
+<div class="role-panel" id="panel-client" role="tabpanel" aria-labelledby="tab-client" hidden><iframe name="clientFrame" id="clientFrame" data-src="client.html" title="Client"></iframe></div>
+<div class="role-panel" id="panel-staff" role="tabpanel" aria-labelledby="tab-staff" hidden><iframe name="staffFrame" id="staffFrame" data-src="staff.html" title="Staff"></iframe></div>
+</main>
+<script>
+(function(){
+  const ROLES=['admin','client','staff'];
+  const $ = (s,r)=> (r||document).querySelector(s);
+  function select(role, opts){
+    if(ROLES.indexOf(role)<0)return;
+    ROLES.forEach(function(r){
+      const on=r===role;
+      const tab=$('#tab-'+r), panel=$('#panel-'+r);
+      tab.setAttribute('aria-selected', on?'true':'false');
+      tab.tabIndex=on?0:-1;
+      if(on){panel.hidden=false;panel.removeAttribute('aria-hidden')}
+      else{panel.hidden=true;panel.setAttribute('aria-hidden','true')}
+    });
+    if(opts&&opts.focus){const t=$('#tab-'+role);t&&t.focus()}
+  }
+  $('#roleTabs').addEventListener('click',function(e){
+    const t=e.target.closest('[data-role-tab]');
+    if(!t)return;
+    select(t.getAttribute('data-role-tab'),{focus:true});
+  });
+  $('#roleTabs').addEventListener('keydown',function(e){
+    const t=e.target.closest('[data-role-tab]');
+    if(!t)return;
+    const keys={ArrowRight:1,ArrowLeft:-1,ArrowDown:1,ArrowUp:-1};
+    let i=ROLES.indexOf(t.getAttribute('data-role-tab'));
+    if(e.key==='Home')i=0;
+    else if(e.key==='End')i=ROLES.length-1;
+    else if(keys[e.key])i=(i+keys[e.key]+ROLES.length)%ROLES.length;
+    else return;
+    e.preventDefault();
+    select(ROLES[i],{focus:true});
+  });
+  ['u_001','u_002','u_010'].forEach(function(id){try{var k='ea-session:'+id,o=JSON.parse(localStorage.getItem(k)||'null')||{};o.in=Date.now();localStorage.setItem(k,JSON.stringify(o))}catch(e){}});
+  [].forEach.call(document.querySelectorAll('iframe[data-src]'),function(f){f.src=f.getAttribute('data-src')});
+  select('admin');
+})();
+</script>
+</body>
+</html>

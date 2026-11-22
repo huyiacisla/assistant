@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>EasySpotOps</title>
+<meta name="description" content="Sample EasySpot app that starts from the Hub with the company, building and theme already chosen.">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="../shared/hub.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="../shared/contract.js"></script>
+<script>
+/* Sample child app. Everything it knows about "where am I" comes from the Hub Context Contract:
+   it never asks the person to pick a company, building or theme again. */
+const APP_ID='ops',APP_NAME='EasySpotOps';
+const PATHS={back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',park:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>',bell:'<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>'};
+const ic=(n,s=18)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${PATHS[n]||''}</svg>`;
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s);
+const live=t=>{const el=$('#toast');el.textContent='';setTimeout(()=>{el.textContent=t},30);clearTimeout(live.t);live.t=setTimeout(()=>{el.textContent=''},4000)};
+
+const res=HubContract.read(location.search,{app:APP_ID,require:['propertyId','property']});
+const ctx=res.ctx;
+/* Sample numbers, different per building so a switch in the Hub is visible here. */
+const SAMPLE={lp:[12,3,41,0],mc:[7,1,18,2]};
+function stats(){const k=ctx.propertyKey;if(SAMPLE[k])return SAMPLE[k];let h=0;String(ctx.propertyId).split('').forEach(c=>{h=(h*31+c.charCodeAt(0))%997});return [h%15+2,h%5,h%40+5,h%3]}
+function today(){
+ const d=new Date(Date.UTC(2026,10,14));
+ if(ctx.dateFormat==='iso')return d.toISOString().slice(0,10);
+ return d.toLocaleDateString(ctx.dateFormat==='dmy'?'en-GB':'en-US',{month:'short',day:'numeric',timeZone:'UTC'});
+}
+function clock(){const o={hour:'numeric',minute:'2-digit',timeZoneName:'short'};if(ctx.timeZone&&ctx.timeZone!=='auto')o.timeZone=ctx.timeZone;try{return new Date().toLocaleTimeString(ctx.dateFormat==='mdy'||!ctx.dateFormat?'en-US':'en-GB',o)}catch(e){return new Date().toLocaleTimeString()}}
+const roleLabel=r=>String(r||'').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
+function back(info){const u=HubContract.backUrl(ctx,info);if(u)location.assign(u)}
+
+function shell(body){return `<header class="topbar"><button type="button" class="btn btn-outline" id="backHub">${ic('back',16)}Back to Hub</button><span class="mini-ic ic-ops" style="margin-left:4px">${ic('park',18)}</span><b style="font-size:15px">${APP_NAME}</b></header><main id="main" tabindex="-1">${body}</main>`}
+function blocked(icon,title,text,action){return `<main id="main" tabindex="-1" style="margin:0 auto"><div class="full"><span class="e-ic">${ic(icon,30)}</span><h1>${title}</h1><p>${text}</p>${action}</div></main>`}
+
+function render(){
+ const root=$('#app');
+ if(!res.ok){
+  /* Opened without the Hub (bookmark, typed address, broken link): never guess a company or building. */
+  root.innerHTML=blocked('lock','Open '+APP_NAME+' from your Hub',`This app starts from the Hub, so it knows your company and building. <span class="small muted" id="ctxMissing">Missing: ${esc(res.errors.join(', '))}</span>`,ctx.returnUrl?`<button type="button" class="btn btn-primary" id="backHub">Back to Hub</button>`:`<a class="btn btn-primary" href="../preview.html">Go to the Hub</a>`);
+  return;}
+ if(HubContract.signedOut(ctx.userId)){
+  root.innerHTML=blocked('out',"You're signed out","You signed out of the Hub, so every EasySpot app is closed too.",`<button type="button" class="btn btn-primary" id="backHub">Sign in from the Hub</button>`);
+  return;}
+ const [g,p,o,t]=stats();
+ root.innerHTML=shell(`<div class="app-head"><div><h1>${esc(ctx.property)}</h1><p class="sub"><span id="appCtx">${esc(ctx.company||ctx.companyId)} · ${esc(ctx.property)} · ${esc(today())}</span><span class="sample">Sample</span></p></div></div>
+ <p class="muted">You're in. No extra sign-in needed.</p>
+ <section class="stat-group" aria-labelledby="opsToday"><h2 id="opsToday" class="grp-h">Today at ${esc(ctx.property)} <span class="sample">Sample</span></h2><div class="stat">${[['Guest passes today',g],['Permits to review',p],['Open spots',o],['Tow requests',t]].map(([l,v])=>`<div class="card"><span class="muted small">${l}</span><b>${v}</b><span class="sample">Sample</span></div>`).join('')}</div></section>
+ <div class="card page-narrow"><h2 class="h3">What the Hub told this app</h2><div class="list" id="ctxList" style="margin-top:6px">${[['Company',ctx.company||ctx.companyId],['Building',ctx.property],['Signed in as',ctx.user||ctx.userId],['Role',roleLabel(ctx.role)],['Theme',ctx.theme||'device'],['Time here',clock()]].map(([k,v])=>`<div class="li"><span class="muted pf-k">${k}</span><span class="pf-v">${esc(v)}</span></div>`).join('')}</div>
+ <p class="small muted" style="margin:10px 0 0">To work on another building, go back to the Hub and switch there.</p></div>
+ <div class="row" style="margin-top:16px"><button type="button" class="btn btn-outline" id="pingHub">${ic('bell',16)}Send an update to the Hub bell</button></div>`);
+}
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button');if(!t)return;
+ if(t.id==='backHub'){back({event:'back'});return}
+ if(t.id==='pingHub'){const ok=HubContract.notifyHub(ctx,{type:'apps',text:`${APP_NAME}: ${stats()[1]} permits are waiting for review at ${ctx.property}.`});live(ok?'Sent. Look under the bell in your Hub.':"Couldn't reach the Hub.");return}
+});
+addEventListener('storage',e=>{if(ctx.userId&&e.key===HubContract.sessionKey(ctx.userId))render()});
+render();
+if(res.ok)document.title=`${APP_NAME} · ${ctx.property}`;
+</script>
+</body>
+</html>

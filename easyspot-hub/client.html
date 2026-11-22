@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>EasySpot Applicator · Hub</title>
+<meta name="description" content="Open, add and manage access to your EasySpot apps in one place.">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="shared/hub.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const BRAND='EasySpot Applicator';
+const CLIENT_COMPANY='AMC LLC';
+const GLOBAL_COMPANY=CLIENT_COMPANY;
+</script>
+<script src="shared/contract.js"></script>
+<script src="shared/registry.js"></script>
+<script src="shared/settings.js"></script>
+<script src="shared/chrome.js"></script>
+<script src="shared/hub-view.js"></script>
+<script>
+const PROFILE_INTRO='Your details in this Hub.';
+const SIGNOUT_LINE="You're signed out of the Hub and every EasySpot app.";
+const hideProfileAsk=u=>u.role==='account_admin';
+const DEFAULT_PROPS=()=>[{k:'lp',name:'Linden Park',id:'prop_101'},{k:'mc',name:'Maple Court',id:'prop_102'}];
+let PROPS=DEFAULT_PROPS();
+const P=k=>PROPS.find(p=>p.k===k);
+const ROLES={account_admin:'Account admin',property_manager:'Property manager',leasing:'Leasing',maintenance:'Maintenance',viewer:'Viewer',unset:'Not set up'};
+const ASSIGNABLE=['property_manager','leasing','maintenance','viewer'];
+const backBtn=()=>`<button type="button" class="btn btn-outline back-btn" data-k="back-hub" data-go="hub">${ic('arrow-left',16)}Back to Apps</button>`;
+function pageCoSub(){if(!COMPANY)return '';return `<p class="sub co-sub"><span>${esc(COMPANY)}</span></p>`}
+const AMC_APPS='ea:cli_001:apps';
+const AMC_ENT='ea:cli_001:ent';
+const AMC_INV='ea:cli_001:invites';
+const AMC_ORG='ea:cli_001:org';
+const AMC_STAFF='ea:cli_001:staff';
+const AMC_ENABLE_OUT='ea:cli_001:enable_out';
+const ADMIN_ENABLE='ea:admin:enable:cli_001';
+const STORE_ROLE='client';
+const NOTE_TOPICS=()=>['u_001','cli_001','cli_001.admins','all'];
+const STORE_FROM=()=>({[AMC_APPS]:['admin'],[ADMIN_ENABLE]:['admin'],[SYS_KEY]:['admin'],[AMC_ENT]:['client'],[AMC_INV]:['client'],[AMC_ORG]:['client'],[AMC_STAFF]:['client'],[AMC_ENABLE_OUT]:['client'],'ea:cli_001:grants:*':['client'],'ea:cli_001:requests:*':['client','staff'],'ea:notes:u_001:*':['client','admin','staff','app'],'ea:notes:cli_001:*':['admin'],'ea:notes:cli_001.admins:*':['admin','staff'],'ea:notes:all:*':['admin']});
+const STORE_WRITE=()=>[AMC_ENT,AMC_INV,AMC_ORG,AMC_STAFF,AMC_ENABLE_OUT,'ea:cli_001:grants:*','ea:cli_001:requests:*','ea:notes:u_001:client','ea:notes:cli_001:client','ea:notes:admin:client'].concat(staffIds().map(id=>'ea:notes:'+id+':client'));
+const STORE_READ=()=>[AMC_APPS,ADMIN_ENABLE,SYS_KEY,AMC_ENT,AMC_INV,AMC_ORG,AMC_STAFF,AMC_ENABLE_OUT,'ea:cli_001:grants:*','ea:cli_001:requests:*','ea:notes:u_001:*','ea:notes:cli_001:*','ea:notes:cli_001.admins:*','ea:notes:all:*'];
+const DEFAULT_POLICY=()=>({reqTtlDays:14,defaultGrant:'none'});
+const REQ_TTL=r=>r&&r.kind==='enable'?sysConfig().enableTtlDays:S.org.policy.reqTtlDays;
+const fresh=()=>({
+ session:'ok',view:'hub',homeView:'hub',tab:'all',q:'',prop:'all',now:0,loading:false,offline:false,failNext:null,accessTab:'apps',matrixUser:'u_002',staffPanel:'add',
+ ent:{ops:{st:'none'},home:{st:'none'},evt:{st:'none'},fin:{st:'none'}},
+ grants:[],reqs:[],invites:[],invSeq:0,enableOut:[],enableReqs:[],org:{policy:DEFAULT_POLICY()},
+ staff:[{id:'u_001',name:'Daniel Okafor',email:'daniel.okafor@amcllc.sample',role:'account_admin',props:['lp','mc'],st:'active'},
+        {id:'u_002',name:'Maria Lopez',email:'maria.lopez@amcllc.sample',role:'property_manager',props:['lp'],st:'active'}],
+});
+let S=fresh();
+const me=()=>S.staff.find(u=>u.id==='u_001');
+const badRole=()=>!ROLES[me().role]||me().role==='unset';
+function grantFor(user,app,prop){return S.grants.find(g=>g.user===user&&g.app===app&&g.prop===prop)}
+function catalogOn(k){return !!(S.catalog&&S.catalog[k])}
+function companyHas(k){return !!(S.ent[k]&&S.ent[k].st==='active')}
+function canGrantApp(k){return catalogOn(k)&&companyHas(k)}
+function grantBlockReason(k){if(!catalogOn(k))return "EasySpot hasn't turned this on for your company.";if(!companyHas(k))return 'Add this app for your company first.';return ''}
+/* What the Hub (shared/hub-view.js) needs to know about this person. */
+function hubStateCtx(){return {role:'client',userRole:me().role,catalog:S.catalog,ent:S.ent,enableReqs:S.enableReqs,prop:S.prop,now:S.now}}
+const hubProps=()=>PROPS;
+const hubPropChoices=()=>[['all','All buildings']].concat(PROPS.map(p=>[p.k,p.name]));
+const PROP_ID=k=>(P(k)||{}).id||null;
+function hubEmpty(tab){return tab==='ready'?{text:"Next step: tap <b>Add app</b> to pick your first EasySpot app. Once it's approved, it appears here, ready to open.",action:`<button type="button" class="btn btn-primary" id="emptyAdd" data-k="empty-add">${ic('plus',16)}Add app</button>`}:null}
+function hubExtraTile(all,tab){return tab==='ready'&&all.some(s=>s.state==='available')?`<button type="button" class="tile add" id="addTile" data-k="add-tile" aria-label="Add app"><span class="t-ic">${ic('plus',26)}</span><span class="t-n">Add app</span></button>`:''}
+function hubReview(){S.view='access';S.accessTab='apps';render();$('#main').focus()}
+const ENUM=APP_STATES;
+window.__events=window.__events||[];
+const DEBUG=()=>{try{return new URLSearchParams(location.search).has('debug')||location.hash==='#debug'}catch(e){return false}};
+let evCtx=null,evSeen=new Set();
+function track(ev){if(ev.tile_state&&!ENUM.includes(ev.tile_state))return;const ctx=['client','u_001',S.view,curTab(),S.prop].join('|');if(ctx!==evCtx){evCtx=ctx;evSeen=new Set()}const key=[ev.app_id,ev.tile_state,ev.property_id,ev.request_status||''].join('|');if(evSeen.has(key))return;evSeen.add(key);window.__events.push(ev);if(DEBUG()){try{console.log('[event]',JSON.stringify(ev))}catch(e){}}}
+function emitTile(k,s){const pk=S.prop!=='all'?S.prop:(S.ent[k].prop||null);const ev={event:'tile_view',tile_state:s.state,lifecycle:s.lifecycle,app_id:k,property_id:pk?PROP_ID(pk):null,account_id:'acct_001',user_id:me().id,role:'client'};track(ev)}
+function accessView(){
+ const pendApps=APPS.filter(a=>S.ent[a.k].st==='pending').length,pendReq=S.reqs.filter(r=>reqViewSt(r)==='pending').length;
+ const tabs=[['apps','Apps',pendApps],['matrix','Matrix',0],['roles','Roles',0],['requests','Requests',pendReq]];
+ let h=`<h1>App access</h1>${pageCoSub()}<p class="sub">Choose which apps your company uses and who can open them. <span class="sample">Sample</span></p>
+ <div class="tabs" role="tablist" aria-label="App access">${tabs.map(([k,l,c])=>`<button type="button" role="tab" class="tab" id="at-${k}" data-k="at-${k}" data-atab="${k}" aria-selected="${S.accessTab===k}" aria-controls="atPanel" tabindex="${S.accessTab===k?0:-1}">${l}${c?`<span class="count" aria-label="${c} waiting">${c}</span>`:''}</button>`).join('')}</div>
+ <div id="atPanel" role="tabpanel" aria-labelledby="at-${S.accessTab}">`;
+ if(S.accessTab==='apps'){
+  h+=APPS.map(a=>{const e=S.ent[a.k];let st,acts='';
+   if(e.st==='pending'){st=`<span class="chip c-pending">${ic('clock',13)}Pending approval</span> <span class="small muted">Added ${day(e.day)} · ${P(e.prop).name} (Sample)</span>`;acts=`<button type="button" class="btn btn-primary" data-k="approve-${a.k}" data-approve="${a.k}">${ic('check',16)}Approve</button><button type="button" class="btn btn-danger" data-k="deny-${a.k}" data-deny="${a.k}">Don't approve</button>`}
+   else if(e.st==='active'){st=`<span class="chip c-open">${ic('circle-check',13)}On your Hub</span> <span class="small muted">Since ${day(e.on)} (Sample)</span>`;acts=`<button type="button" class="btn btn-outline" data-k="remove-${a.k}" data-remove="${a.k}">Remove</button>`}
+   else st=`<span class="chip c-available">${ic('plus',13)}Not added</span>`;
+   return `<div class="card row" data-row="${a.k}"><span class="mini-ic ic-${a.k}">${ic(a.icon,18)}</span><div class="grow"><h2 class="h3">${a.name}</h2><div>${st}</div></div><div class="acts">${acts}</div></div>`}).join('');}
+ if(S.accessTab==='matrix'){
+  const people=S.staff.filter(u=>u.role!=='account_admin'&&u.st==='active');
+  const u=people.find(p=>p.id===S.matrixUser)||people[0];
+  if(!u)h+=`<div class="card">Invite staff first, then give them access here. <button type="button" class="btn btn-outline" data-k="go-staff" data-go="staff">Go to Staff</button></div>`;
+  else{h+=`<div class="field"><label for="mxUser">Person</label><select id="mxUser" data-k="mx-user">${people.map(p=>`<option value="${p.id}"${p.id===u.id?' selected':''}>${esc(p.name)} · ${ROLES[p.role]||'Not set up'}</option>`).join('')}</select></div>`;
+   h+=APPS.map(a=>{const act=canGrantApp(a.k);const why=grantBlockReason(a.k);
+    return `<div class="card"><div class="row"><span class="mini-ic ic-${a.k}">${ic(a.icon,18)}</span><div class="grow"><h2 class="h3">${a.name}</h2>${act?'':'<div class="small muted">'+esc(why)+'</div>'}</div></div>${act?`<div class="stack" style="margin-top:6px">${PROPS.map(p=>{const on=!!grantFor(u.id,a.k,p.k),ass=u.props.includes(p.k);return `<button type="button" class="sw" role="switch" data-k="sw-${a.k}-${p.k}" data-sw="${a.k}|${p.k}" aria-checked="${on}" ${ass?'':'disabled'}><span class="trk"></span><span>${p.name}${ass?'':' · not assigned to this person'}</span></button>`}).join('')}</div>`:''}</div>`}).join('');}}
+ if(S.accessTab==='roles'){
+  h+=[['Account admin','Adds apps, approves requests and gives people access across the whole account.'],['Property manager, Leasing, Maintenance','Open the apps they were given for their buildings, and ask for more.'],['Viewer','Opens the apps they were given. To get more, they ask an admin.']].map(([t,d])=>`<div class="card"><h2 class="h3">${t}</h2><p class="small muted" style="margin:4px 0 0">${d}</p></div>`).join('');}
+ if(S.accessTab==='requests'){
+  const rs=S.reqs.slice().sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  if(!rs.length)h+=`<div class="card" id="noReqs">No access requests right now.</div>`;
+  h+=rs.map(r=>{const u=S.staff.find(x=>x.id===r.user);const vs=reqViewSt(r);const rs=REQ_STATE[vs],st=[rs.chip,rs.icon,vs==='pending'?`${rs.label} · expires ${day(r.day+reqTtl(r))}`:rs.label];
+   return `<div class="card" data-req-row="${r.id}"><div class="row"><span class="mini-ic ic-${r.app}">${ic(A(r.app).icon,18)}</span><div class="grow"><h2 class="h3">${esc(u.name)} · ${A(r.app).name}</h2><div class="small muted">${P(r.prop).name} · sent ${day(r.day)} (Sample)</div></div><span class="chip ${st[0]}">${ic(st[1],13)}${st[2]}</span></div><p class="small" style="margin:8px 0 0">“${esc(r.reason)}”</p>${vs==='pending'?`<div class="field"><label for="rn-${r.id}">Note to ${esc(u.name.split(' ')[0])} (optional)</label><input id="rn-${r.id}" data-k="rn-${r.id}"></div><div class="row" style="margin-top:10px"><div class="acts"><button type="button" class="btn btn-primary" data-k="rq-ok-${r.id}" data-rqok="${r.id}">${ic('check',16)}Approve</button><button type="button" class="btn btn-danger" data-k="rq-no-${r.id}" data-rqno="${r.id}">Don't approve</button></div></div>`:''}</div>`}).join('');}
+ return h+'</div>';}
+
+function staffView(){
+ const inv=S.invites||[];
+ const panel=S.staffPanel==='open'?'open':'add';
+ const people=S.staff.filter(u=>u.role!=='account_admin'&&u.st==='active');
+ const openId=people.some(p=>p.id===S.matrixUser)?S.matrixUser:(people[0]&&people[0].id);
+ const u=people.find(p=>p.id===openId);
+ const appPicks=()=>APPS.map(a=>{const ok=canGrantApp(a.k),why=grantBlockReason(a.k);return `<label class="app-pick${ok?'':' is-off'}" for="invApp-${a.k}"><input type="checkbox" id="invApp-${a.k}" data-k="inv-app-${a.k}" data-inv-app="${a.k}" ${ok?'':'disabled'} ${why?`aria-describedby="invAppWhy-${a.k}"`:''}><span><b>${a.name}</b>${why?`<span class="small muted" id="invAppWhy-${a.k}">${esc(why)}</span>`:''}</span></label>`}).join('');
+ const add=`<form class="card" id="invForm" novalidate><h2 id="staffAddH">Add staff</h2>
+ <p class="small muted" style="margin:4px 0 10px">Invite a new person and, if you want, pick the apps they can open when they join.</p>
+ <div class="field"><label for="invName">Name</label><input id="invName" data-k="inv-name" autocomplete="off"></div>
+ <div class="field"><label for="invEmail">Email</label><input id="invEmail" data-k="inv-email" type="email" autocomplete="off" aria-describedby="invErr"><div class="err" id="invErr" hidden></div></div>
+ <div class="field"><label for="invRole">Role</label><select id="invRole" data-k="inv-role">${ASSIGNABLE.map(r=>`<option value="${r}">${ROLES[r]}</option>`).join('')}</select></div>
+ <div class="field"><label for="invProp">Building</label><select id="invProp" data-k="inv-prop">${PROPS.map(p=>`<option value="${p.k}">${p.name}</option>`).join('')}</select><span class="help">Buildings come from your onboarding (Sample).</span></div>
+ <fieldset class="app-picks" id="invApps"><legend>Initial apps</legend><p class="help" id="invAppsHelp">Only apps EasySpot has turned on for your company can be opened for this person.</p>${appPicks()}</fieldset>
+ <div style="margin-top:14px"><button type="submit" class="btn btn-primary" id="invSend" data-k="inv-send">Send invite</button></div></form>
+ <div class="card"><h2>Waiting to join <span class="chip c-pending" id="invCount">${inv.length}</span></h2><div class="list" id="invList">${inv.length?inv.map(x=>`<div class="li inv-li"><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><div class="small muted" style="overflow-wrap:anywhere">${esc(x.email)} · ${ROLES[x.role]} · ${P(x.props[0]).name}</div><div class="small muted">Invite email sent ${day(x.day)} (Sample)${(x.apps||[]).length?' · Opens '+(x.apps.map(k=>A(k).name).join(', ')):''}</div></div><div class="inv-acts"><button type="button" class="btn btn-outline" data-k="resend-${x.id}" data-resend="${x.id}" aria-label="Resend invite to ${esc(x.name)}">Resend</button><button type="button" class="btn btn-danger" data-k="cancelinv-${x.id}" data-cancelinv="${x.id}" aria-label="Cancel invite to ${esc(x.name)}">Cancel invite</button><button type="button" class="btn btn-outline" data-k="accept-${x.id}" data-accept="${x.id}">Mark joined (demo)</button></div></div>`).join(''):'<p class="small muted" style="margin:8px 0 0">No one is waiting.</p>'}</div></div>`;
+ const open=!u?`<div class="card" id="openAppsPanel"><h2 id="staffOpenH">Open apps</h2><p class="small muted">Invite staff first, then open apps for them here.</p></div>`:
+  `<div class="card" id="openAppsPanel"><h2 id="staffOpenH">Open apps</h2><p class="small muted" style="margin:4px 0 10px">Choose what ${esc(u.name)} can open. You can only turn on apps EasySpot has enabled for your company.</p>
+ <div class="field"><label for="openUser">Person</label><select id="openUser" data-k="open-user">${people.map(p=>`<option value="${p.id}"${p.id===u.id?' selected':''}>${esc(p.name)} · ${ROLES[p.role]||'Not set up'}</option>`).join('')}</select></div>
+ ${APPS.map(a=>{const act=canGrantApp(a.k),why=grantBlockReason(a.k);
+   return `<div class="card nested" data-open-app="${a.k}"><div class="row"><span class="mini-ic ic-${a.k}">${ic(a.icon,18)}</span><div class="grow"><h3 class="h3">${a.name}</h3>${act?'':'<div class="small muted">'+esc(why)+'</div>'}</div></div>${act?`<div class="stack" style="margin-top:6px">${PROPS.map(p=>{const on=!!grantFor(u.id,a.k,p.k),ass=u.props.includes(p.k);return `<button type="button" class="sw" role="switch" data-k="osw-${u.id}-${a.k}-${p.k}" data-sw="${a.k}|${p.k}" aria-checked="${on}" ${ass?'':'disabled'}><span class="trk"></span><span>${p.name}${ass?'':' · not assigned to this person'}</span></button>`}).join('')}</div>`:''}</div>`}).join('')}</div>
+ <div class="card"><h2>Team</h2><div class="list">${S.staff.filter(x=>x.st==='active').map(x=>`<div class="li"><span class="av" aria-hidden="true">${x.name.split(' ').map(c=>c[0]).join('')}</span><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><div class="small muted">${ROLES[x.role]||'Not set up'} · ${x.props.map(p=>P(p).name).join(', ')}</div></div>${x.role!=='account_admin'?`<button type="button" class="btn btn-outline" data-k="open-for-${x.id}" data-openfor="${x.id}" aria-label="Manage access for ${esc(x.name)}">Manage access</button>`:''}</div>`).join('')}</div></div>`;
+ return `<h1>Staff</h1>${pageCoSub()}<p class="sub">Add new staff, or open apps for someone already on your team. <span class="sample">Sample</span></p>
+ <div class="staff-flows" role="tablist" aria-label="Staff actions"><button type="button" role="tab" class="staff-flow" id="staffAddTab" data-k="staff-add" data-staffflow="add" aria-selected="${panel==='add'}" aria-controls="staffPanel" tabindex="${panel==='add'?0:-1}">${ic('plus',16)}Add staff</button><button type="button" role="tab" class="staff-flow" id="staffOpenTab" data-k="staff-open" data-staffflow="open" aria-selected="${panel==='open'}" aria-controls="staffPanel" tabindex="${panel==='open'?0:-1}">${ic('key-round',16)}Manage access</button></div>
+ <div id="staffPanel" role="tabpanel" aria-labelledby="${panel==='add'?'staffAddTab':'staffOpenTab'}">${panel==='add'?add:open}</div>`;
+}
+
+function notFoundView(){return `<div class="full" id="notFound"><span class="e-ic">${ic('search',30)}</span><h1>Not found</h1><p>We couldn't find that page in your workspace.</p><button type="button" class="btn btn-primary" data-k="back-hub" data-go="hub">Back to Hub</button></div>`}
+
+function sidebarHTML(){
+ const blocked=badRole();
+ const pendApps=APPS.filter(a=>S.ent[a.k].st==='pending').length+S.reqs.filter(r=>reqViewSt(r)==='pending').length,inv=(S.invites||[]).length;
+ const navBtn=(v,label,icn,cnt)=>`<button type="button" class="sb-item" data-k="nav-${v}" data-go="${v}"${S.view===v||(v==='hub'&&S.view==='nf')?' aria-current="page"':''}>${ic(icn,18)}<span>${label}</span>${cnt?`<span class="cnt" aria-label="${cnt} waiting">${cnt}</span>`:''}</button>`;
+ return brandSide()+
+ `${blocked?'':`<div class="sb-ws"><span class="k">Account</span><span class="v">${esc(CLIENT_COMPANY)} <span class="sample" style="color:#A9B5C9;border-color:#5B6B82">Sample</span></span><label class="k" for="propSel">Building</label><select id="propSel" data-k="prop-sel"><option value="all"${S.prop==='all'?' selected':''}>All buildings</option>${PROPS.map(p=>`<option value="${p.k}"${S.prop===p.k?' selected':''}>${p.name}</option>`).join('')}</select></div>`}
+ <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('hub','Apps','layers')+`<div class="sb-label">Account admin</div>${navBtn('access','App access','shield-check',pendApps)}${navBtn('staff','Staff','users',inv)}`}</nav>`;
+}
+
+function render(){
+ const root=$('#app');
+ const keep=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.k:null;
+ const caret=document.activeElement&&document.activeElement.id==='hdrSearch'?document.activeElement.selectionStart:null;
+ if(S.session!=='ok'){drawerOpen=false;root.innerHTML=sessionHTML();return}
+ ensureShell();
+ $('#sidebar').innerHTML=sidebarHTML();
+ paintTopbar();
+ $('#offline').hidden=!S.offline;
+ let v;
+ if(badRole())v=blockerView();
+ else if(S.view==='hub')v=hubView();
+ else if(S.view==='access')v=accessView();
+ else if(S.view==='staff')v=staffView();
+ else if(S.view==='profile')v=profileView();
+ else if(S.view==='settings')v=settingsView();
+ else v=notFoundView();
+ $('#main').innerHTML=v;$('#main').classList.toggle('wide',S.view==='hub'&&!badRole());uiSave();
+ document.title=`${BRAND} · ${badRole()?'Hub':({hub:'Hub',access:'App access',staff:'Staff',profile:'Account profile',settings:'Settings'}[S.view]||'Not found')}`;
+ if(keep&&!document.querySelector('.scrim')){const el=document.querySelector(`[data-k="${keep}"]`);if(el&&el!==document.activeElement){el.focus({preventScroll:true});if(caret!=null&&el.setSelectionRange)el.setSelectionRange(caret,caret)}}
+}
+
+function addModal(pre,opener){
+ const taken=k=>['pending','active'].includes(S.ent[k].st)||!catalogOn(k);
+ let sel=pre&&!taken(pre)?pre:(APPS.find(a=>!taken(a.k))||{}).k||null;
+ const m=openModal('addModal',`<h2 id="addModal-t">Add app</h2><p class="lead">Pick an app from the ${esc(BRAND)} catalog. It shows on your Hub once it's approved.</p>
+ <div class="cat" role="radiogroup" aria-label="${esc(BRAND)} catalog" id="cat">${APPS.map(a=>`<button type="button" class="cat-opt" role="radio" data-cat="${a.k}" aria-checked="${a.k===sel}" ${taken(a.k)?'disabled':''} tabindex="${a.k===sel?0:-1}"><span class="mini-ic ic-${a.k}">${ic(a.icon,18)}</span><span class="grow"><b>${a.name}</b><span>${taken(a.k)?(!catalogOn(a.k)?'Not available':S.ent[a.k].st==='pending'?'Already pending approval':'Already on your Hub'):a.desc}</span></span></button>`).join('')}</div>
+ <div class="field"><label for="adProp">First building</label><select id="adProp">${PROPS.map(p=>`<option value="${p.k}">${p.name}</option>`).join('')}</select><span class="help">From your onboarding (Sample). You can give access to more buildings later.</span></div>
+ <div class="acts-col sticky-acts"><button type="button" class="btn btn-primary btn-block" id="adSubmit" ${sel?'':'disabled'}>Add app</button>${sel?'':'<p class="why">All catalog apps are already added.</p>'}<button type="button" class="btn btn-outline btn-block" data-close>Cancel</button></div>`,{opener,focus:sel?`[data-cat="${sel}"]`:'#adSubmit'});
+ const opts=[...m.querySelectorAll('.cat-opt:not(:disabled)')];
+ const pick=k=>{sel=k;m.querySelectorAll('.cat-opt').forEach(b=>{b.setAttribute('aria-checked',b.dataset.cat===k);b.tabIndex=b.dataset.cat===k?0:-1})};
+ opts.forEach(b=>{b.onclick=()=>pick(b.dataset.cat);b.onkeydown=e=>{if(['ArrowDown','ArrowUp','ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const i=opts.indexOf(b),d=['ArrowDown','ArrowRight'].includes(e.key)?1:-1;const n=opts[(i+d+opts.length)%opts.length];pick(n.dataset.cat);n.focus()}}});
+ m.querySelector('#adSubmit').onclick=()=>{if(!sel)return;S.ent[sel]={st:'pending',prop:m.querySelector('#adProp').value,day:S.now};note(`${A(sel).name} is pending approval.`);pushShared();const name=A(sel).name;S.tab='all';closeModal({noReturn:true});S.view='hub';render();live(`${name} added. It's pending approval.`);const t=document.querySelector(`[data-k="tile-${sel}"]`);(t||$('#main')).focus()};
+}
+/* Ask EasySpot (the admin console) to turn an app on for the company. */
+function enableReqModal(k,opener){
+ const a=A(k);
+ const m=openModal('enableModal',`<h2 id="enableModal-t">Ask EasySpot for ${a.name}</h2><p class="lead">EasySpot reviews your request and turns the app on for ${esc(CLIENT_COMPANY)}. It stays open for ${reqTtl({kind:'enable'})} days.</p>
+ <div class="field"><label for="enReason">What do you need it for?</label><textarea id="enReason" aria-describedby="enHelp enErr" placeholder="For example: we want to plan community events at our buildings"></textarea><span class="help" id="enHelp">At least 10 characters. Demo only: nothing leaves this preview (Sample).</span><div class="err" id="enErr" role="alert" hidden></div></div>
+ <div class="acts-col sticky-acts"><button type="button" class="btn btn-primary btn-block" id="enSend">Send request</button><button type="button" class="btn btn-outline btn-block" data-close>Cancel</button></div>`,{opener,focus:'#enReason'});
+ m.querySelector('#enSend').onclick=()=>{
+  const ta=m.querySelector('#enReason'),v=ta.value.trim(),err=m.querySelector('#enErr');
+  if(v.length<10){err.hidden=false;err.innerHTML=`${ic('circle-alert',15)}<span>Please write at least 10 characters (you have ${v.length}).</span>`;ta.classList.add('is-err');ta.setAttribute('aria-invalid','true');ta.focus();return}
+  let n=500;S.enableReqs.concat(S.enableOut).forEach(r=>{const x=String(r.id).match(/^req_(\d+)$/);if(x)n=Math.max(n,+x[1])});
+  S.enableOut.push({id:'req_'+(n+1),app:k,day:S.now,reason:v.slice(0,300)});
+  pushShared();notify('admin','req',`${CLIENT_COMPANY} asked to turn on ${a.name}.`);note(`You asked EasySpot to turn on ${a.name}.`,'req');
+  closeModal({noReturn:true});applyShared();render();live(`Request sent to EasySpot for ${a.name}.`);(document.querySelector(`[data-k="tile-${k}"]`)||$('#main')).focus()};
+}
+function cancelInvite(id,opener){const u=(S.invites||[]).find(x=>x.id===id);if(!u||!/^inv-\d+$/.test(u.id))return;const m=openModal('cancelModal',`<h2 id="cancelModal-t">Cancel invite to ${esc(u.name)}?</h2><p class="lead">${esc(u.name)} won't be able to join with this invite. You can invite them again later.</p><div class="acts-col"><button type="button" class="btn btn-danger btn-block" id="ciYes">Cancel invite</button><button type="button" class="btn btn-outline btn-block" data-close>Keep invite</button></div>`,{opener,focus:'[data-close]'});m.querySelector('#ciYes').onclick=()=>{S.invites=(S.invites||[]).filter(x=>x.id!==id);pushShared();closeModal({noReturn:true});render();live(`Invite to ${u.name} canceled.`);const n=document.querySelector('[data-resend]')||$('#invName')||$('#main');n.focus()}}
+
+function loadSample(){S.catalog=readApps();S.ent={ops:{st:'active',prop:'lp',day:-20,on:-20},home:{st:'active',prop:'lp',day:-2,on:-1},evt:{st:'none'},fin:{st:'none'}};S.grants=[{user:'u_002',app:'ops',prop:'lp',on:-20}];PROPS=DEFAULT_PROPS();pushShared();applyShared()}
+function demoModal(opener){
+ const u=S.staff.find(x=>x.id==='u_002');
+ const b=(id,t)=>`<button type="button" class="btn btn-outline btn-block" id="${id}">${t}</button>`;
+ const m=openModal('demoModal',`<h2 id="demoModal-t">Demo options</h2><p class="lead">These only change this demo. Everything here is Sample data.</p>
+ <h3 style="margin-top:14px">Set up</h3><div class="stack" style="margin-top:8px">${b('dReset','Start as a new account')}${b('dSample','Reset sample data')}</div>
+ <h3 style="margin-top:14px">Opening apps</h3><div class="stack" style="margin-top:8px">${b('dFail','Make the next Open fail')}${b('dNoAcc','Make the next Open find no access')}${b('dSession','End the session')}${b('dOffline',S.offline?'Go back online':'Go offline')}</div>
+ <h3 style="margin-top:14px">People and time</h3><div class="stack" style="margin-top:8px">${b('dViewer',u.role==='viewer'?`Make ${u.name.split(' ')[0]} a property manager`:`Make ${u.name.split(' ')[0]} a viewer`)}${b('dBad',badRole()?'Fix the account role':'Make this account not set up')}${b('dDays','Skip ahead 15 days')}${b('dOutside','Open a page from another workspace')}</div>`,{opener});
+ const act=(id,f,msg)=>{m.querySelector('#'+id).onclick=()=>{f();closeModal();if(typeof render==='function')render();if(msg)live(msg)}};
+ act('dReset',()=>{const now=S.now;S=fresh();S.now=now;S.catalog=readApps();PROPS=DEFAULT_PROPS();pushShared();applyShared()},'Started as a new account.');
+ act('dSample',()=>{const now=S.now;S=fresh();S.now=now;loadSample()},'Sample data reset.');
+ act('dFail',()=>{S.failNext='error'},'The next Open will fail once.');
+ act('dNoAcc',()=>{S.failNext='noaccess'},'The next Open will find no access.');
+ m.querySelector('#dSession').onclick=()=>{closeAll();S.session='expired';render();$('#signIn').focus()};
+ act('dOffline',()=>{S.offline=!S.offline});
+ act('dViewer',()=>{u.role=u.role==='viewer'?'property_manager':'viewer';pushShared()},u.role==='viewer'?'Now a property manager.':'Now a viewer.');
+ act('dBad',()=>{const x=me();if(badRole())x.role=x._r||'account_admin';else{x._r=x.role;x.role='unset'}$('#toast').textContent='';clearTimeout(live.t)});
+ act('dDays',()=>{S.now+=15},'Skipped ahead 15 days.');
+ act('dOutside',()=>{S.view='nf'});
+}
+
+function helpItems(){return [
+ ['Can\'t find an app?','Open <b>All apps</b> and tap the app. If EasySpot hasn\'t turned it on for your company yet, you can ask from there.'],
+ ['Pending approval?',`You review added apps in <b>App access</b>. Requests from your team stay open for ${reqTtl()} days. Change that in <b>Settings</b>.`],
+ ['Pin what you use','Tap the pin on an app to keep it at the top of your Hub.'],
+ ['Profile and sign out','Tap your name in the header.']
+]}
+
+function handleRoleClick(t){
+ if(t.dataset.staffflow){S.staffPanel=t.dataset.staffflow==='open'?'open':'add';render();const n=document.querySelector(`[data-staffflow="${S.staffPanel}"]`);n&&n.focus();return}
+ if(t.dataset.openfor){S.staffPanel='open';S.matrixUser=t.dataset.openfor;render();const sel=$('#openUser');sel&&sel.focus();return}
+ if(handleHubClick(t))return;
+ if(t.id==='addTile'||t.id==='emptyAdd'){addModal(null,t);return}
+ if(t.dataset.atab){S.accessTab=t.dataset.atab;render();return}
+ if(t.dataset.approve){const k=t.dataset.approve;S.ent[k].st='active';S.ent[k].on=S.now;note(`${A(k).name} approved. It's on your Hub now.`);notify('cli_001','apps',`${A(k).name} is now on your company's Hub.`);pushShared();render();live(`${A(k).name} approved. It's on your Hub now.`);const r=document.querySelector(`[data-k="remove-${k}"]`);r&&r.focus();return}
+ if(t.dataset.deny){const k=t.dataset.deny;S.ent[k]={st:'denied'};note(`${A(k).name} was not approved. You can add it again.`);pushShared();render();live(`${A(k).name} not approved.`);$('[data-k="at-apps"]').focus();return}
+ if(t.dataset.remove){const k=t.dataset.remove;S.ent[k]={st:'removed'};S.grants=S.grants.filter(g=>g.app!==k);notify('cli_001','apps',`${A(k).name} was removed from your company's Hub.`);pushShared();render();live(`${A(k).name} removed from your Hub.`);$('[data-k="at-apps"]').focus();return}
+ if(t.dataset.sw){const [a,p]=t.dataset.sw.split('|');const u=S.matrixUser;const g=grantFor(u,a,p);if(g){S.grants=S.grants.filter(x=>x!==g);notify(u,'apps',`Your access to ${A(a).name} at ${P(p).name} was removed.`)}else{if(!canGrantApp(a)){live(grantBlockReason(a));return}S.grants.push({user:u,app:a,prop:p,on:S.now});note(`${S.staff.find(x=>x.id===u).name} now has ${A(a).name} at ${P(p).name}.`);notify(u,'appr',`You now have ${A(a).name} at ${P(p).name}.`)}pushShared();render();live(`${A(a).name} at ${P(p).name}: ${g?'access off':'access on'}.`);return}
+ if(t.dataset.rqok||t.dataset.rqno){const id=t.dataset.rqok||t.dataset.rqno,r=S.reqs.find(x=>x.id===id),nt=($('#rn-'+id)||{}).value||'';if(!r)return;r.note=nt.trim();
+  if(t.dataset.rqok){r.st='approved';if(canGrantApp(r.app)&&!grantFor(r.user,r.app,r.prop))S.grants.push({user:r.user,app:r.app,prop:r.prop,on:S.now})}
+  else r.st='denied';
+  notify(r.user,'appr',`Your request for ${A(r.app).name} at ${P(r.prop).name} was ${r.st==='approved'?'approved':'not approved'}.${r.note?' Note from your admin: “'+r.note+'”':''}`);
+  pushShared();render();live(t.dataset.rqok?'Request approved.':'Request not approved.');$('[data-k="at-requests"]').focus();return}
+ if(t.dataset.resend){const u=(S.invites||[]).find(x=>x.id===t.dataset.resend);if(!u||!/^inv-\d+$/.test(u.id))return;u.day=S.now;pushShared();render();live('Invite sent again');const b=document.querySelector(`[data-k="resend-${u.id}"]`);b&&b.focus();return}
+ if(t.dataset.cancelinv){cancelInvite(t.dataset.cancelinv,t);return}
+ if(t.dataset.accept){const u=(S.invites||[]).find(x=>x.id===t.dataset.accept);if(!u||!/^inv-\d+$/.test(u.id)||u.id===me().id||S.staff.some(x=>x.id===u.id||x.id===me().id&&u.id===me().id)||ASSIGNABLE.indexOf(u.role)<0)return;S.invites=S.invites.filter(x=>x.id!==u.id);S.staff.push({id:u.id,name:u.name,email:u.email,role:u.role,props:u.props,st:'active'});const prop=(u.props&&u.props[0])||'lp';((u.apps||[]).length?u.apps:(S.org.policy.defaultGrant==='company_apps'?APP_KEYS:[])).forEach(k=>{if(canGrantApp(k)&&!grantFor(u.id,k,prop))S.grants.push({user:u.id,app:k,prop,on:S.now})});S.matrixUser=u.id;pushShared();render();live(`${u.name} joined.`);$('#main').focus();return}
+}
+
+document.addEventListener('submit',e=>{if(e.target.id!=='invForm')return;e.preventDefault();
+ const nm=$('#invName').value.trim(),em=$('#invEmail').value.trim(),er=$('#invErr');
+ const bad=!nm?'Please add a name.':!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)?'Please enter a full email address, like name@company.':S.staff.concat(S.invites||[]).some(u=>u.email.toLowerCase()===em.toLowerCase())?'This person is already on your team or invited.':'';
+ if(bad){er.hidden=false;er.innerHTML=`${ic('circle-alert',15)}<span>${bad}</span>`;$('#invEmail').classList.add('is-err');$('#invEmail').setAttribute('aria-invalid','true');(nm?$('#invEmail'):$('#invName')).focus();return}
+ const role=$('#invRole').value;if(ASSIGNABLE.indexOf(role)<0){er.hidden=false;er.innerHTML=`${ic('circle-alert',15)}<span>Choose a role from the list.</span>`;$('#invRole').focus();return}S.invSeq=(S.invSeq||0)+1;let id='inv-'+S.invSeq;while((S.invites||[]).some(x=>x.id===id)||S.staff.some(x=>x.id===id)||id===me().id)id='inv-'+(++S.invSeq);if(!/^inv-\d+$/.test(id)||id===me().id)return;const apps=[...document.querySelectorAll('[data-inv-app]:checked')].map(x=>x.dataset.invApp).filter(k=>canGrantApp(k));(S.invites||(S.invites=[])).push({id,name:nm,email:em,role,props:[$('#invProp').value],apps,st:'invited',day:S.now});
+ pushShared();render();live(`Invite sent to ${nm}.`);$('#invName').focus();});
+document.addEventListener('change',e=>{
+ if(e.target.id==='propSel'){const v=e.target.value;if(!hubPropChoices().some(x=>x[0]===v))return;setHubProp(v);S.loading=true;render();live('Switching building…');setTimeout(()=>{S.loading=false;render();live('Building switched.')},450)}
+ if(e.target.id==='mxUser'||e.target.id==='openUser'){S.matrixUser=e.target.value;render()}});
+document.addEventListener('keydown',e=>{const t=e.target;if(!t||!t.dataset||!t.dataset.staffflow)return;if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const tabs=[...document.querySelectorAll('[data-staffflow]')];let i=tabs.indexOf(t);if(i<0)return;if(e.key==='Home')i=0;else if(e.key==='End')i=tabs.length-1;else i=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;e.preventDefault();S.staffPanel=tabs[i].dataset.staffflow;render();const n=document.querySelector(`[data-staffflow="${S.staffPanel}"]`);n&&n.focus()});
+
+function grantKey(uid){return 'ea:cli_001:grants:'+uid}
+function reqKey(uid){return 'ea:cli_001:requests:'+uid}
+function staffIds(){return S.staff.filter(u=>u.role!=='account_admin').map(u=>u.id)}
+function readApps(){const o=storeGet(AMC_APPS);if(!o)return defaultApps();/* EasySpot's console hasn't run here yet: assume its starting catalog */const apps=o.v===1?validApps(o.apps):null;return apps||emptyApps()}
+function seedStores(){}
+const SAFE_NAME=/^[^<>&"]{2,40}$/;
+function validProps(a){if(!Array.isArray(a))return null;const out=[];a.forEach(p=>{if(p&&/^[a-z0-9]{1,12}$/.test(p.k)&&p.k!=='all'&&p.k!=='last'&&typeof p.name==='string'&&SAFE_NAME.test(p.name.trim())&&/^prop_\d+$/.test(p.id)&&!out.some(x=>x.k===p.k))out.push({k:p.k,name:p.name.trim().slice(0,40),id:p.id})});return out.length?out.slice(0,8):null}
+function applyShared(){
+ S.catalog=readApps();
+ const org=storeGet(AMC_ORG);
+ if(org&&org.v===1){PROPS=validProps(org.props)||PROPS;const pol=org.policy||{};S.org={policy:{reqTtlDays:[7,14,30].includes(pol.reqTtlDays)?pol.reqTtlDays:14,defaultGrant:pol.defaultGrant==='company_apps'?'company_apps':'none'}}}
+ const stf=storeGet(AMC_STAFF);
+ if(stf&&stf.v===1&&Array.isArray(stf.staff)){const mine=me(),rest=stf.staff.filter(u=>u&&/^(u_\d+|inv-\d+)$/.test(u.id)&&u.id!==mine.id&&ASSIGNABLE.indexOf(u.role)>=0&&typeof u.name==='string').map(u=>({id:u.id,name:u.name,email:String(u.email||''),role:u.role,props:Array.isArray(u.props)?u.props.filter(p=>P(p)):[],st:'active'}));S.staff=[mine].concat(rest)}
+ const eo=storeGet(AMC_ENABLE_OUT),inbox=storeGet(ADMIN_ENABLE),seen={};
+ S.enableOut=eo&&eo.v===1&&Array.isArray(eo.reqs)?eo.reqs.filter(r=>r&&/^req_\d+$/.test(r.id)&&APP_KEYS.includes(r.app)&&typeof r.day==='number').map(r=>({id:r.id,app:r.app,day:r.day,reason:String(r.reason||'')})):[];
+ S.enableReqs=[];
+ (inbox&&inbox.v===1&&Array.isArray(inbox.reqs)?inbox.reqs:[]).forEach(r=>{if(r&&/^req_\d+$/.test(r.id)&&APP_KEYS.includes(r.app)&&REQ_STATES.includes(r.st)&&typeof r.day==='number'){seen[r.id]=1;S.enableReqs.push({id:r.id,app:r.app,st:r.st,day:r.day,kind:'enable'})}});
+ S.enableOut.forEach(r=>{if(!seen[r.id])S.enableReqs.push({id:r.id,app:r.app,st:'pending',day:r.day,kind:'enable'})});
+ const ent=storeGet(AMC_ENT);
+ if(ent&&ent.v===1&&ent.ent)S.ent=Object.assign(emptyEnt(),JSON.parse(JSON.stringify(ent.ent)));
+ S.grants=[];S.reqs=[];
+ staffIds().forEach(uid=>{
+  const g=storeGet(grantKey(uid));
+  if(g&&g.v===1&&Array.isArray(g.grants))g.grants.forEach(x=>{if(x&&APP_KEYS.includes(x.app))S.grants.push({user:uid,app:x.app,prop:x.prop,on:x.on})});
+  const q=storeGet(reqKey(uid));
+  if(q&&q.v===1&&Array.isArray(q.reqs))q.reqs.forEach(r=>{if(r&&r.id&&APP_KEYS.includes(r.app))S.reqs.push(Object.assign({},r,{user:uid,kind:'access'}))});
+ });
+ const inv=storeGet(AMC_INV);
+ S.invites=[];
+ if(inv&&inv.v===1&&Array.isArray(inv.invites)){
+  inv.invites.forEach(u=>{
+   if(!u||!/^inv-\d+$/.test(u.id)||u.id===me().id)return;
+   if(ASSIGNABLE.indexOf(u.role)<0)return;S.invites.push({id:u.id,name:u.name,email:u.email,role:u.role,props:Array.isArray(u.props)?u.props.slice():[],apps:Array.isArray(u.apps)?u.apps.filter(k=>APP_KEYS.includes(k)):[],st:'invited',day:u.day||0});
+  });
+  if(inv.invSeq!=null)S.invSeq=inv.invSeq;
+ }
+}
+function collectShared(){
+ storeSet(AMC_ORG,{v:1,props:PROPS.map(p=>({k:p.k,name:p.name,id:p.id})),policy:Object.assign({},S.org.policy)});
+ storeSet(AMC_STAFF,{v:1,staff:S.staff.filter(u=>u.id!==me().id&&u.st==='active').map(u=>({id:u.id,name:u.name,email:u.email,role:u.role,props:(u.props||[]).slice()}))});
+ storeSet(AMC_ENABLE_OUT,{v:1,reqs:S.enableOut.map(r=>({id:r.id,app:r.app,day:r.day,reason:r.reason}))});
+ storeSet(AMC_ENT,{v:1,ent:JSON.parse(JSON.stringify(S.ent))});
+ staffIds().forEach(uid=>{
+  storeSet(grantKey(uid),{v:1,grants:S.grants.filter(g=>g.user===uid).map(g=>({app:g.app,prop:g.prop,on:g.on}))});
+  storeSet(reqKey(uid),{v:1,reqs:S.reqs.filter(r=>r.user===uid).map(r=>({id:r.id,app:r.app,prop:r.prop,st:r.st,day:r.day,reason:r.reason,note:r.note}))});
+ });
+ storeSet(AMC_INV,{v:1,invSeq:S.invSeq||0,invites:(S.invites||[]).filter(u=>/^inv-\d+$/.test(u.id)&&u.id!==me().id&&ASSIGNABLE.indexOf(u.role)>=0).map(u=>({id:u.id,name:u.name,email:u.email,role:u.role,props:(u.props||[]).slice(),apps:(u.apps||[]).filter(k=>APP_KEYS.includes(k)),st:'invited',day:u.day}))});
+}
+
+bindChrome();
+
+function searchIndex(){
+ const people=(S.staff||[]).filter(u=>u.st==='active').map(u=>({key:'p-'+u.id,label:u.name,run:()=>{S.view='staff';S.staffPanel=u.role==='account_admin'?'add':'open';if(u.role!=='account_admin')S.matrixUser=u.id;render()}}));
+ const pages=[
+  {key:'hub',label:'Apps',terms:'hub home launcher',run:()=>go('hub')},
+  {key:'access',label:'App access',terms:'requests matrix roles',run:()=>go('access')},
+  {key:'staff',label:'Staff',terms:'team invite people',run:()=>go('staff')},
+  {key:'profile',label:'Account profile',run:()=>go('profile')},
+  {key:'settings',label:'Settings',run:()=>go('settings')}
+ ];
+ return {apps:hubSearchApps(),buildings:hubSearchBuildings(),people,clients:[],pages,settings:searchSettingsItems()};
+}
+
+/* Organization settings: only the account admin's page has them. */
+function settingsOrgHTML(head){
+ const pol=S.org.policy,opt=(list,cur)=>list.map(([v,l])=>`<option value="${v}"${String(cur)===String(v)?' selected':''}>${l}</option>`).join('');
+ return `<div class="card">${head('org','Organization')}<p class="small muted" style="margin:4px 0 0">Only account admins see this. Changes reach your whole team.</p>
+ <div class="list" style="margin-top:6px"><div class="li"><span class="muted pf-k">Company</span><span class="pf-v">${esc(CLIENT_COMPANY)} <span class="sample">Sample</span></span></div></div>
+ <h3 class="h3" style="margin-top:14px">Buildings</h3>
+ ${PROPS.map((p,i)=>`<div class="field"><label for="org-b-${p.k}">Building ${i+1}</label><input id="org-b-${p.k}" data-k="org-b-${p.k}" data-setorg="prop:${p.k}" value="${esc(p.name)}" maxlength="40" autocomplete="off"></div>`).join('')}
+ ${PROPS.length<8?`<form id="orgAddForm" class="set-b" novalidate><div class="field"><label for="orgNew">Add a building</label><input id="orgNew" data-k="org-new" maxlength="40" autocomplete="off" aria-describedby="orgNewErr"><div class="err" id="orgNewErr" role="alert" hidden></div></div><button type="submit" class="btn btn-outline" data-k="org-add">${ic('plus',16)}Add</button></form>`:''}
+ <h3 class="h3" style="margin-top:16px">Access requests</h3>
+ <div class="field"><label for="orgTtl">A request from your team stays open for</label><select id="orgTtl" data-k="org-ttl" data-setorg="ttl">${opt([[7,'7 days'],[14,'14 days'],[30,'30 days']],pol.reqTtlDays)}</select></div>
+ <div class="field"><label for="orgGrant">When someone new joins, they can open</label><select id="orgGrant" data-k="org-grant" data-setorg="grant" aria-describedby="orgGrantHelp">${opt([['none','Only the apps I pick in their invite'],['company_apps','Every app on our Hub, at their building']],pol.defaultGrant)}</select><span class="help" id="orgGrantHelp">Used when an invite has no apps picked.</span></div></div>`;
+}
+function orgNameProblem(name,skip){return name.length<2?'Please use at least 2 characters.':!SAFE_NAME.test(name)?'Please use letters, numbers and simple punctuation only.':PROPS.some(p=>p.k!==skip&&p.name.toLowerCase()===name.toLowerCase())?'You already have a building with that name.':''}
+function orgSaved(msg){pushShared();settingsSaved=true;render();live(msg)}
+function settingsOrgChange(key,val,el){
+ if(key==='ttl'){if([7,14,30].includes(+val)){S.org.policy.reqTtlDays=+val;orgSaved('Saved for your team.')}return}
+ if(key==='grant'){if(['none','company_apps'].includes(val)){S.org.policy.defaultGrant=val;orgSaved('Saved for your team.')}return}
+ if(key.indexOf('prop:')===0){const p=P(key.slice(5)),name=val.trim();if(!p||name===p.name)return;const bad=orgNameProblem(name,p.k);if(bad){el.value=p.name;live(bad);return}p.name=name.slice(0,40);orgSaved(`Building renamed to ${p.name}.`)}
+}
+document.addEventListener('submit',e=>{if(e.target.id!=='orgAddForm')return;e.preventDefault();
+ const inp=$('#orgNew'),name=inp.value.trim(),bad=orgNameProblem(name,null),err=$('#orgNewErr');
+ if(bad){err.hidden=false;err.innerHTML=`${ic('circle-alert',15)}<span>${bad}</span>`;inp.classList.add('is-err');inp.setAttribute('aria-invalid','true');inp.focus();return}
+ let n=PROPS.length+1;while(P('b'+n)||PROPS.some(p=>p.id==='prop_'+(100+n)))n++;
+ PROPS.push({k:'b'+n,name:name.slice(0,40),id:'prop_'+(100+n)});me().props.push('b'+n);
+ notify('cli_001','apps',`${name} was added to your company's buildings.`);orgSaved(`${name} added.`);const f=$('#orgNew');f&&f.focus()});
+
+settingsInit(me().id);
+bindShared();
+/* The single-file build has no admin console beside it, so it starts with the sample account. */
+if(window.EA_STANDALONE&&!storeGet(AMC_ENT))loadSample();
+hubBoot();
+S.offline=navigator.onLine===false;
+if(bootSession()){render();shareReady();hubReturn()}
+
+</script>
+</body>
+</html>

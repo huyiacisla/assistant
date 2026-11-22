@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>EasySpot · Admin</title>
+<meta name="description" content="Review client companies, turn apps on or off, and handle their requests.">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="shared/hub.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const BRAND='EasySpot';
+</script>
+<script src="shared/contract.js"></script>
+<script src="shared/registry.js"></script>
+<script src="shared/settings.js"></script>
+<script src="shared/chrome.js"></script>
+<script>
+const ROLES={internal_admin:'Internal admin',unset:'Not set up'};
+const ST={active:['Active','c-open','circle-check'],setup:['Setup in progress','c-pending','clock'],paused:['Paused','c-locked','lock']};
+const PROFILE_INTRO='Your details in this console.';
+const SIGNOUT_LINE="You're signed out of EasySpot and every EasySpot app.";
+const hideProfileAsk=u=>u.role==='internal_admin'||u.role==='account_admin';
+const backClients=()=>`<button type="button" class="btn btn-outline back-btn" data-k="back-clients" data-go="clients">${ic('arrow-left',16)}Back to Clients</button>`;
+const ADMIN_CLIENTS='ea:admin:clients';
+const ADMIN_ENABLE='ea:admin:enable:'+AMC_ID;
+const AMC_APPS='ea:cli_001:apps';
+const AMC_ENABLE_OUT='ea:cli_001:enable_out';
+const STORE_ROLE='admin';
+const NOTE_SELF='admin';
+const NOTE_TOPICS=()=>['admin'];
+const STORE_FROM=()=>({[ADMIN_CLIENTS]:['admin'],[ADMIN_ENABLE]:['admin'],[AMC_APPS]:['admin'],[SYS_KEY]:['admin'],[AMC_ENABLE_OUT]:['client'],'ea:notes:admin:*':['client']});
+const STORE_WRITE=()=>[ADMIN_CLIENTS,ADMIN_ENABLE,AMC_APPS,SYS_KEY,'ea:notes:admin:admin','ea:notes:cli_001:admin','ea:notes:cli_001.admins:admin','ea:notes:all:admin'];
+const STORE_READ=()=>[ADMIN_CLIENTS,ADMIN_ENABLE,AMC_APPS,SYS_KEY,AMC_ENABLE_OUT,'ea:notes:admin:*'];
+const REQ_TTL=()=>sysConfig().enableTtlDays;
+const OTHER_IDS=['cli_002','cli_003','cli_004'];
+const ENABLE_REASONS={req_001:'We would like EasySpotEvents for community gatherings at our buildings.',req_002:'Please turn EasySpotOps back on so we can start work again.'};
+const CLIENTS_META={
+ cli_001:{name:'AMC LLC',email:'hello@amcllc.sample',contact:'Daniel Okafor'},
+ cli_002:{name:'Harbor & Pine Co',email:'hello@harborpine.sample',contact:'Elena Ruiz'},
+ cli_003:{name:'Northstar Properties',email:'hello@northstarprops.sample',contact:'James Okonkwo'},
+ cli_004:{name:'Willow Bend Group',email:'hello@willowbend.sample',contact:'Sofia Berg'}
+};
+const fresh=()=>({
+ session:'ok',view:'clients',homeView:'clients',client:null,q:'',now:0,offline:false,
+ me:{id:'u_010',name:'Priya Shah',email:'priya.shah@easyspot.sample',role:'internal_admin',company:'EasySpot'},
+ clients:[],
+ reqs:[]});
+let S=fresh();
+const me=()=>S.me;
+const badRole=()=>!ROLES[me().role]||me().role==='unset';
+const C=id=>S.clients.find(c=>c.id===id);
+function appsOn(c){return APPS.filter(a=>c.apps[a.k]).length}
+function pendReq(c){return S.reqs.filter(r=>r.client===c.id&&reqViewSt(r)==='pending').length}
+
+window.__events=window.__events||[];
+const DEBUG=()=>{try{return new URLSearchParams(location.search).has('debug')||location.hash==='#debug'}catch(e){return false}};
+let evSeen=new Set();
+function track(ev){
+ const allowed=new Set(['event','admin_user_id','client_id','app_id','request_id','request_status','enabled']);
+ const clean={};for(const k of Object.keys(ev))if(allowed.has(k)&&ev[k]!=null)clean[k]=ev[k];
+ const key=Object.keys(clean).sort().map(k=>k+':'+clean[k]).join('|');
+ if(clean.event==='client_view'&&evSeen.has(key))return;
+ if(clean.event==='client_view')evSeen.add(key);
+ window.__events.push(clean);
+ if(DEBUG()){try{console.log('[event]',JSON.stringify(clean))}catch(e){}}
+}
+function emitClientView(id){track({event:'client_view',admin_user_id:me().id,client_id:id})}
+function emitToggle(cid,app,on){track({event:'app_toggle',admin_user_id:me().id,client_id:cid,app_id:app,enabled:!!on})}
+function emitReview(id,cid,st){track({event:'request_review',admin_user_id:me().id,client_id:cid,request_id:id,request_status:st})}
+
+function profileExtraRows(u,row){return row('Scope','All clients')}
+
+function validEnableReqs(arr){if(!Array.isArray(arr))return [];return arr.filter(r=>r&&typeof r==='object'&&/^req_\d+$/.test(r.id)&&APP_KEYS.includes(r.app)&&['pending','approved','denied','expired'].includes(r.st)&&typeof r.day==='number').map(r=>({id:r.id,app:r.app,st:r.st,day:r.day}))}
+function validateAdminClients(o){if(!o||o.v!==1||!o.clients||typeof o.clients!=='object')return null;const out={v:1,clients:{}};OTHER_IDS.forEach(id=>{const c=o.clients[id];if(!c)return;const apps=validApps(c.apps);if(!apps)return;const st=['active','setup','paused'].includes(c.st)?c.st:'active';out.clients[id]={st,apps,reqs:validEnableReqs(c.reqs)}});return out}
+function validateAmcApps(o){if(!o||o.v!==1)return null;const apps=validApps(o.apps);if(!apps)return null;const st=['active','setup','paused'].includes(o.st)?o.st:'active';return {v:1,st,apps}}
+function seedAdminClients(){return {v:1,clients:{cli_002:{st:'active',apps:{ops:true,home:true,evt:true,fin:true},reqs:[]},cli_003:{st:'setup',apps:{ops:true,home:false,evt:false,fin:false},reqs:[]},cli_004:{st:'paused',apps:{ops:false,home:false,evt:false,fin:false},reqs:[{id:'req_002',app:'ops',st:'pending',day:-2}]}}}}
+function seedAmcApps(){return {v:1,st:'active',apps:defaultApps()}}
+function seedAmcEnable(){return {v:1,reqs:[{id:'req_001',app:'evt',st:'pending',day:0}]}}
+function seedStores(){if(!storeGet(ADMIN_CLIENTS))storeSet(ADMIN_CLIENTS,seedAdminClients());if(!storeGet(AMC_APPS))storeSet(AMC_APPS,seedAmcApps());if(!storeGet(ADMIN_ENABLE))storeSet(ADMIN_ENABLE,seedAmcEnable())}
+function applyShared(){
+ const others=validateAdminClients(storeGet(ADMIN_CLIENTS))||{v:1,clients:{}};
+ const amc=validateAmcApps(storeGet(AMC_APPS))||seedAmcApps();
+ const rawIn=storeGet(ADMIN_ENABLE);
+ const inbox={v:1,reqs:rawIn&&rawIn.v===1?validEnableReqs(rawIn.reqs):[]};
+ const pack=(id,st,apps)=>{const meta=CLIENTS_META[id]||{name:id,email:'',contact:''};return {id,name:meta.name,email:meta.email,contact:meta.contact,st,apps}}
+ S.clients=[pack(AMC_ID,amc.st,amc.apps)].concat(OTHER_IDS.map(id=>{const c=others.clients[id];return c?pack(id,c.st,c.apps):null}).filter(Boolean));
+ S.reqs=inbox.reqs.map(r=>Object.assign({client:AMC_ID,reason:ENABLE_REASONS[r.id]||''},r));
+ OTHER_IDS.forEach(id=>{(others.clients[id]&&others.clients[id].reqs||[]).forEach(r=>S.reqs.push(Object.assign({client:id,reason:ENABLE_REASONS[r.id]||''},r)))});
+ /* Requests the client sent from its Hub land in the same inbox. */
+ const eo=storeGet(AMC_ENABLE_OUT);
+ (eo&&eo.v===1&&Array.isArray(eo.reqs)?eo.reqs:[]).forEach(r=>{
+  if(!r||!/^req_\d+$/.test(r.id)||!APP_KEYS.includes(r.app)||typeof r.day!=='number')return;
+  const reason=String(r.reason||'').slice(0,300),have=S.reqs.find(x=>x.id===r.id);
+  if(have){if(have.client===AMC_ID&&!have.reason)have.reason=reason}
+  else S.reqs.push({client:AMC_ID,id:r.id,app:r.app,st:'pending',day:r.day,reason})});
+}
+function collectShared(){
+ const amc=C(AMC_ID);if(amc)storeSet(AMC_APPS,{v:1,st:amc.st,apps:Object.assign({},amc.apps)});
+ const others={v:1,clients:{}};
+ OTHER_IDS.forEach(id=>{const c=C(id);if(!c)return;others.clients[id]={st:c.st,apps:Object.assign({},c.apps),reqs:S.reqs.filter(r=>r.client===id).map(r=>({id:r.id,app:r.app,st:r.st,day:r.day}))}});
+ storeSet(ADMIN_CLIENTS,others);
+ storeSet(ADMIN_ENABLE,{v:1,reqs:S.reqs.filter(r=>r.client===AMC_ID).map(r=>({id:r.id,app:r.app,st:r.st,day:r.day}))});
+}
+function resetAdminStores(){storeSet(ADMIN_CLIENTS,seedAdminClients());storeSet(AMC_APPS,seedAmcApps());storeSet(ADMIN_ENABLE,seedAmcEnable());storeSet(SYS_KEY,SYS_DEFAULT());applyShared()}
+
+function clientsView(){
+ const list=S.clients.slice();
+ let h=`<div class="hub-head"><div><h1>Clients</h1><p class="sub"><span>Companies that use EasySpot apps</span><span class="sample">Sample</span></p></div></div>`;
+ if(!list.length)return h+`<div class="empty" id="noMatch"><span class="e-ic">${ic('search',22)}</span><p>No clients to show yet.</p></div>`;
+ h+=`<div class="stack" style="margin-top:8px">${list.map(c=>{
+  const st=ST[c.st];
+  return `<button type="button" class="card row cli-row" data-k="cli-${c.id}" data-client="${c.id}" style="width:100%;text-align:left;cursor:pointer"><div class="grow"><h2 class="h3">${esc(c.name)}</h2><div class="small muted">${esc(c.contact)} · <span style="overflow-wrap:anywhere">${esc(c.email)}</span></div><div class="cli-meta"><span class="chip ${st[1]}">${ic(st[2],13)}${st[0]}</span><span class="small muted">${appsOn(c)} app${appsOn(c)===1?'':'s'} on</span>${pendReq(c)?`<span class="chip c-pending">${ic('clock',13)}${pendReq(c)} pending</span>`:''}</div></div></button>`;
+ }).join('')}</div>`;
+ return h;}
+
+function clientDetailView(){
+ const c=C(S.client);if(!c)return notFoundView();
+ emitClientView(c.id);
+ const st=ST[c.st];
+ const reqs=S.reqs.filter(r=>r.client===c.id).sort((a,b)=>b.day-a.day||b.id.localeCompare(a.id));
+ let h=`<div class="page-narrow">${backClients()}
+ <h1 style="margin-top:12px">${esc(c.name)}</h1><p class="sub"><span class="chip ${st[1]}">${ic(st[2],13)}${st[0]}</span> <span class="sample">Sample</span></p>
+ <div class="card" style="margin-top:12px"><div class="list"><div class="li"><span class="muted pf-k">Contact</span><span class="pf-v">${esc(c.contact)}</span></div><div class="li"><span class="muted pf-k">Email</span><span class="pf-v" style="overflow-wrap:anywhere">${esc(c.email)}</span></div><div class="li"><span class="muted pf-k">Status</span><span class="pf-v">${st[0]}</span></div></div></div>
+ <div class="card" style="margin-top:12px"><h2 class="h3">Apps</h2><p class="small muted" style="margin:4px 0 8px">Turn an app on or off for this client. Nothing is sent (Sample).</p><div class="stack">${APPS.map(a=>`<button type="button" class="sw" role="switch" data-k="sw-${c.id}-${a.k}" data-tog="${c.id}|${a.k}" aria-checked="${!!c.apps[a.k]}"><span class="trk"></span><span><b style="font-weight:600">${a.name}</b><span class="small muted" style="display:block">${a.desc}</span></span></button>`).join('')}</div></div>
+ <div class="card req-card"><h2 class="h3">Requests</h2>`;
+ if(!reqs.length)h+=`<p class="small muted" style="margin:8px 0 0" id="noReqs">No requests from this client.</p>`;
+ h+=reqs.map(r=>{const vs=reqViewSt(r);const rs=REQ_STATE[vs],rst=[rs.chip,rs.icon,rs.label];
+  return `<div class="card" style="margin-top:10px;box-shadow:none" data-req-row="${r.id}"><div class="row"><span class="mini-ic ic-${r.app}">${ic(A(r.app).icon,18)}</span><div class="grow"><h2 class="h3">${A(r.app).name}</h2><div class="small muted">Asked ${day(r.day)} (Sample)</div></div><span class="chip ${rst[0]}">${ic(rst[1],13)}${rst[2]}</span></div>${r.reason?`<p class="small" style="margin:8px 0 0">“${esc(r.reason)}”</p>`:''}${vs==='pending'?`<div class="row" style="margin-top:10px"><div class="acts"><button type="button" class="btn btn-primary" data-k="rq-ok-${r.id}" data-rqok="${r.id}">${ic('check',16)}Approve</button><button type="button" class="btn btn-danger" data-k="rq-no-${r.id}" data-rqno="${r.id}">Don't approve</button></div></div>`:''}</div>`}).join('');
+ return h+'</div></div>';
+}
+
+function notFoundView(){return `<div class="full" id="notFound"><span class="e-ic">${ic('search',30)}</span><h1>Not found</h1><p>We couldn't find that page.</p><button type="button" class="btn btn-primary" data-k="back-clients" data-go="clients">Back to Clients</button></div>`}
+
+function sidebarHTML(){
+ const blocked=badRole();
+ const waiting=S.reqs.filter(r=>reqViewSt(r)==='pending').length;
+ const navBtn=(v,label,icn,cnt)=>`<button type="button" class="sb-item" data-k="nav-${v}" data-go="${v}"${S.view===v||(v==='clients'&&S.view==='client')?' aria-current="page"':''}>${ic(icn,18)}<span>${label}</span>${cnt?`<span class="cnt" aria-label="${cnt} pending">${cnt}</span>`:''}</button>`;
+ return brandSide('Admin')+
+ `${blocked?'':`<div class="sb-ws"><span class="k">Signed in as</span><span class="v">${esc(me().name)} <span class="sample" style="color:#A9B5C9;border-color:#5B6B82">Sample</span></span></div>`}
+ <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('clients','Clients','layers',waiting)+`<div class="sb-label">Apps</div>`+APP_REGISTRY.filter(a=>a.launch.urlByRole&&a.launch.urlByRole[me().role]).map(a=>`<button type="button" class="sb-item" data-k="open-${a.id}" data-openapp="${a.id}">${ic(a.icon,18)}<span>${a.name} admin</span><span class="sr-only"> (opens in a new tab)</span></button>`).join('')}</nav>`;
+}
+
+function render(){
+ const root=$('#app');
+ const keep=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.k:null;
+ const caret=document.activeElement&&document.activeElement.id==='hdrSearch'?document.activeElement.selectionStart:null;
+ if(S.session!=='ok'){drawerOpen=false;root.innerHTML=sessionHTML();return}
+ ensureShell();
+ $('#sidebar').innerHTML=sidebarHTML();
+ paintTopbar();
+ $('#offline').hidden=!S.offline;
+ let v;
+ if(badRole())v=blockerView();
+ else if(S.view==='clients')v=clientsView();
+ else if(S.view==='client')v=clientDetailView();
+ else if(S.view==='profile')v=profileView(backClients());
+ else if(S.view==='settings')v=settingsView(backClients());
+ else v=notFoundView();
+ $('#main').innerHTML=v;uiSave();
+ document.title=`${BRAND} · ${badRole()?'Admin':({clients:'Clients',client:(C(S.client)||{}).name||'Client',profile:'Account profile',settings:'Settings'}[S.view]||'Not found')}`;
+ if(keep&&!document.querySelector('.scrim')){const el=document.querySelector(`[data-k="${keep}"]`);if(el&&el!==document.activeElement){el.focus({preventScroll:true});if(caret!=null&&el.setSelectionRange)el.setSelectionRange(caret,caret)}}
+}
+
+function demoModal(opener){
+ const b=(id,t)=>`<button type="button" class="btn btn-outline btn-block" id="${id}">${t}</button>`;
+ const m=openModal('demoModal',`<h2 id="demoModal-t">Demo options</h2><p class="lead">These only change this demo. Everything here is Sample data.</p>
+ <h3 style="margin-top:14px">Set up</h3><div class="stack" style="margin-top:8px">${b('dReset','Reset sample data')}</div>
+ <h3 style="margin-top:14px">Session</h3><div class="stack" style="margin-top:8px">${b('dSession','End the session')}${b('dOffline',S.offline?'Go back online':'Go offline')}${b('dBad',badRole()?'Fix the account role':'Make this account not set up')}${b('dDays','Skip ahead 15 days')}</div>`,{opener});
+ const act=(id,f,msg)=>{m.querySelector('#'+id).onclick=()=>{f();closeModal();if(typeof render==='function')render();if(msg)live(msg)}};
+ act('dReset',()=>{S=fresh();evSeen=new Set();resetAdminStores()},'Sample data reset.');
+ m.querySelector('#dSession').onclick=()=>{closeAll();S.session='expired';render();$('#signIn').focus()};
+ act('dOffline',()=>{S.offline=!S.offline});
+ act('dBad',()=>{const x=me();if(badRole())x.role=x._r||'internal_admin';else{x._r=x.role;x.role='unset'}$('#toast').textContent='';clearTimeout(live.t)});
+ act('dDays',()=>{S.now+=15},'Skipped ahead 15 days.');
+}
+
+function helpItems(){return [
+ ['What is this?','This is the EasySpot internal console. You see client companies, turn apps on or off for each one, and review their requests.'],
+ ['A request is waiting','Open the client and use <b>Approve</b> or <b>Don\'t approve</b>. Approving turns that app on for them.'],
+ ['An app is not ready for anyone','Open <b>Settings</b>, then <b>System</b>, and set the app to Maintenance or Coming soon. Every Hub shows it straight away.'],
+ ['Profile and sign out','Tap your name in the header.']
+]}
+
+function handleRoleClick(t){
+ if(t.dataset.openapp){const a=appDef(t.dataset.openapp),u=a&&a.launch.urlByRole&&a.launch.urlByRole[me().role];if(!u)return;if(S.offline){live(`You're offline. ${a.name} will open when you're back online.`);return}const w=window.open(u,'_blank');if(!w){live('Your browser blocked the new tab. Allow pop-ups, then try again.');return}try{w.opener=null}catch(e){}closeDrawer(false);live(`${a.name} admin opened in a new tab.`);return}
+ if(t.dataset.client){S.view='client';S.client=t.dataset.client;evSeen=new Set();render();$('#main').focus();return}
+ if(t.dataset.tog){const [cid,app]=t.dataset.tog.split('|');const c=C(cid);if(!c)return;c.apps[app]=!c.apps[app];emitToggle(cid,app,c.apps[app]);note(`${c.name}: ${A(app).name} is now ${c.apps[app]?'on':'off'}.`,'apps');if(cid===AMC_ID)notify('cli_001','apps',`EasySpot turned ${A(app).name} ${c.apps[app]?'on':'off'} for your company.`);pushShared();render();live(`${A(app).name} for ${c.name}: ${c.apps[app]?'on':'off'}.`);const b=document.querySelector(`[data-k="sw-${cid}-${app}"]`);b&&b.focus();return}
+ if(t.dataset.rqok||t.dataset.rqno){const id=t.dataset.rqok||t.dataset.rqno,r=S.reqs.find(x=>x.id===id);if(!r)return;const c=C(r.client);
+  if(t.dataset.rqok){r.st='approved';c.apps[r.app]=true;note(`${c.name}: ${A(r.app).name} approved and turned on.`);if(r.client===AMC_ID)notify('cli_001.admins','appr',`EasySpot approved ${A(r.app).name} for your company. You can add it to your Hub now.`);live(`${A(r.app).name} approved for ${c.name}.`);emitReview(r.id,r.client,'approved')}
+  else{r.st='denied';note(`${c.name}: ${A(r.app).name} was not approved.`);if(r.client===AMC_ID)notify('cli_001.admins','appr',`EasySpot did not approve ${A(r.app).name} for your company.`);live(`${A(r.app).name} not approved.`);emitReview(r.id,r.client,'not_approved')}
+  pushShared();render();const focus=$('[data-k="nav-clients"]');focus&&focus.blur();return}
+}
+
+
+bindChrome();
+
+function searchIndex(){
+ const apps=APP_REGISTRY.map(a=>({key:a.id,label:a.name,terms:a.category+' '+a.keywords+' availability lifecycle',run:()=>openSettingsSection('org')}));
+ const people=(S.clients||[]).filter(c=>c.contact).map(c=>({key:'p-'+c.id,label:c.contact,run:()=>{S.view='client';S.client=c.id;render();const m=$('#main');m&&m.focus()}}));
+ const clients=(S.clients||[]).map(c=>({key:'c-'+c.id,label:c.name,run:()=>{S.view='client';S.client=c.id;render();const m=$('#main');m&&m.focus()}}));
+ const pages=[
+  {key:'clients',label:'Clients',terms:'companies accounts',run:()=>go('clients')},
+  {key:'profile',label:'Account profile',run:()=>go('profile')},
+  {key:'settings',label:'Settings',run:()=>go('settings')}
+ ];
+ return {apps,buildings:[],people,clients,pages,settings:searchSettingsItems()};
+}
+
+/* System settings: what every company's Hub sees. */
+const LC_NOTE={live:n=>`${n} is ready to open.`,beta:n=>`${n} is open in beta.`,coming_soon:n=>`${n} is not open yet. It is coming soon.`,maintenance:n=>`${n} is down for maintenance.`};
+function settingsOrgHTML(head){
+ const sys=sysConfig(),opt=(list,cur)=>list.map(([v,l])=>`<option value="${v}"${String(cur)===String(v)?' selected':''}>${l}</option>`).join('');
+ return `<div class="card">${head('org','System')}<p class="small muted" style="margin:4px 0 0">These apply to every client's Hub straight away.</p>
+ <h3 class="h3" style="margin-top:14px">App availability</h3>
+ ${APP_REGISTRY.map(a=>`<div class="field"><label for="sys-lc-${a.id}">${a.name}</label><select id="sys-lc-${a.id}" data-k="sys-lc-${a.id}" data-setorg="lc:${a.id}"${lifecycleChoices(a.id).length<3?` aria-describedby="sys-lch-${a.id}"`:''}>${opt(lifecycleChoices(a.id).map(v=>[v,LIFECYCLE[v].label]),appLifecycle(a.id))}</select>${lifecycleChoices(a.id).length<3?`<span class="help" id="sys-lch-${a.id}">No destination is registered for this app yet, so it can't go live.</span>`:''}</div>`).join('')}
+ <h3 class="h3" style="margin-top:16px">Client requests</h3>
+ <div class="field"><label for="sysTtl">A client's request to turn an app on stays open for</label><select id="sysTtl" data-k="sys-ttl" data-setorg="ttl">${opt([[7,'7 days'],[14,'14 days'],[30,'30 days']],sys.enableTtlDays)}</select></div></div>`;
+}
+function settingsOrgChange(key,val){
+ const sys=sysConfig();
+ if(key==='ttl'){if(![7,14,30].includes(+val))return;sys.enableTtlDays=+val}
+ else if(key.indexOf('lc:')===0){const id=key.slice(3);if(!appDef(id)||!lifecycleChoices(id).includes(val)||appLifecycle(id)===val)return;sys.lifecycle[id]=val;notify('all','apps',LC_NOTE[val](appDef(id).name),{app:id,ready:val==='live'||val==='beta'});note(`${appDef(id).name} set to ${LIFECYCLE[val].label} for everyone.`,'apps')}
+ else return;
+ storeSet(SYS_KEY,sys);settingsSaved=true;render();live('Saved for every Hub.');
+}
+
+settingsInit(me().id);
+bindShared();
+uiRestore();
+S.offline=navigator.onLine===false;
+if(bootSession()){render();shareReady()}
+
+</script>
+</body>
+</html>

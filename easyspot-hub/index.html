@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>EasySpot Applicator</title>
+<meta name="description" content="One sign-in for every EasySpot app: parking, resident requests, events and finance, already on the right building.">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="shared/hub.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const BRAND='EasySpot Applicator';
+</script>
+<script src="shared/contract.js"></script>
+<script src="shared/registry.js"></script>
+<script src="shared/settings.js"></script>
+<script src="shared/chrome.js"></script>
+<script src="shared/auth.js"></script>
+<script>
+/* The front door: public page, log in, sign up, password help.
+   Views are plain hash names (#login, #signup, #forgot) so each one can be linked and the Back button works. */
+Object.assign(ICONS,{
+ eye:'<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+ 'eye-off':'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+ mail:'<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>',
+ 'arrow-right':'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>'});
+const VIEWS=['','login','signup','forgot','verify','sent'];
+let view='',memo={},busy=false,lockTimer=null;
+const route=()=>{const h=location.hash.replace(/^#/,'');return VIEWS.includes(h)?h:''};
+const nav=v=>{if(route()===v){view=v;render()}else location.hash=v};
+const brand=()=>`<a class="ld-brand" href="#" data-home aria-label="${BRAND} home"><span class="sb-logo">${ic('layers',18)}</span><b>${BRAND}</b></a>`;
+const themeBtn=()=>`<button type="button" class="btn btn-icon btn-ghost" id="themeBtn" aria-label="${theme==='dark'?'Switch to light mode':'Switch to dark mode'}">${ic(theme==='dark'?'sun':'moon',20)}</button>`;
+const year=new Date().getFullYear();
+
+function landing(){
+ const me=EaAuth.current();
+ const points=['One sign-in for every EasySpot app','Your building follows you into each app','Ask for access in two taps. Admins answer in one'];
+ const seats=[['shield-check','Account admins','Choose the apps your company uses, invite the team and decide who opens what, building by building.'],['users','Property staff','See the apps you were given, open them on your building and ask for the ones you need.'],['layers','EasySpot team','Turn apps on for each client, answer their requests and set what is live for everyone.']];
+ const steps=[['Sign in once','Your account opens the Hub and every app you have been given.'],['Pick your building','Choose it in the Hub. Each app starts on that building.'],['Open the app','Tap it. No second sign-in, no picking the building again.']];
+ const tiles=APP_REGISTRY.map(a=>{const lc=appLifecycle(a.id),live=lc==='live'||lc==='beta';return `<div class="ld-tile"><span class="mini-ic ic-${a.id}">${ic(a.icon,18)}</span><b>${a.shortName}</b><span class="chip ${live?'c-open':'c-pending'}">${live?'Ready':LIFECYCLE[lc].label}</span></div>`}).join('');
+ return `<div id="landing">
+ <header class="ld-nav">${brand()}<nav class="ld-links" aria-label="Account">${themeBtn()}${me?`<button type="button" class="btn btn-primary" id="openWs">Open your workspace${ic('arrow-right',16)}</button>`:`<a class="btn btn-ghost" href="#login" id="navLogin">Log in</a><a class="btn btn-primary" href="#signup" id="navSignup">Sign up</a>`}</nav></header>
+ <main id="main" tabindex="-1">
+ <section class="ld-hero">
+  <div class="ld-copy"><p class="ld-eyebrow">For property teams</p><h1>One front door to every EasySpot app.</h1>
+   <p class="ld-lead">Parking, resident requests, events and finance open from one place, already on the right building.</p>
+   <div class="ld-cta"><a class="btn btn-primary btn-lg" href="#signup">Create an account</a><a class="btn btn-outline btn-lg" href="#login">Log in</a></div>
+   <ul class="ld-points">${points.map(p=>`<li>${ic('circle-check',18)}<span>${p}</span></li>`).join('')}</ul></div>
+  <div class="ld-shot" aria-hidden="true"><div class="ld-shot-bar"><span></span><span></span><span></span><i>Apps · Linden Park</i></div><div class="ld-shot-grid">${tiles}</div></div>
+ </section>
+ <section class="ld-sec" aria-labelledby="ldApps"><h2 id="ldApps">What opens from your Hub</h2>
+  <div class="ld-apps">${APP_REGISTRY.map(a=>{const lc=appLifecycle(a.id),live=lc==='live'||lc==='beta';return `<div class="ld-app"><span class="mini-ic ic-${a.id}">${ic(a.icon,20)}</span><div class="ld-app-t"><b>${a.name}</b><span class="small muted">${a.category}</span></div><span class="chip ${live?'c-open':'c-pending'}">${LIFECYCLE[lc].label}</span><p>${a.description}</p></div>`}).join('')}</div></section>
+ <section class="ld-sec" aria-labelledby="ldSeats"><h2 id="ldSeats">A workspace for every seat</h2>
+  <div class="ld-apps">${seats.map(([i,t,d])=>`<div class="ld-seat"><span class="ld-seat-ic">${ic(i,20)}</span><b>${t}</b><p>${d}</p></div>`).join('')}</div></section>
+ <section class="ld-sec" aria-labelledby="ldHow"><h2 id="ldHow">How it works</h2>
+  <ol class="ld-steps">${steps.map(([t,d])=>`<li><b>${t}</b><span>${d}</span></li>`).join('')}</ol></section>
+ <section class="ld-band"><h2>Ready when your team is.</h2><div class="ld-cta"><a class="btn btn-primary btn-lg" href="#signup">Create an account</a><a class="btn btn-outline btn-lg" href="#login">Log in</a></div></section>
+ </main>
+ <footer class="ld-foot"><span>© ${year} EasySpot</span><span class="ld-foot-l"><a href="#login">Log in</a><a href="#signup">Sign up</a><a href="#forgot">Password help</a></span></footer>
+ </div>`;
+}
+
+const field=(id,label,attrs,extra)=>`<div class="field"><label for="${id}">${label}</label>${extra&&extra.wrap?`<div class="au-pw">`:''}<input id="${id}" name="${id}" ${attrs} aria-describedby="${id}Err${extra&&extra.help?' '+id+'Help':''}">${extra&&extra.wrap?`<button type="button" class="btn btn-icon btn-ghost au-eye" data-eye="${id}" aria-label="Show password" aria-pressed="false">${ic('eye',18)}</button></div>`:''}${extra&&extra.help?`<span class="help" id="${id}Help">${extra.help}</span>`:''}<div class="err" id="${id}Err" role="alert" hidden></div></div>`;
+
+function authShell(title,lead,body,foot){
+ return `<div class="au">
+ <aside class="au-side"><a class="ld-brand" href="#" data-home><span class="sb-logo">${ic('layers',18)}</span><b>${BRAND}</b></a>
+  <div class="au-pitch"><h2>Every EasySpot app behind one sign-in.</h2><ul>${APP_REGISTRY.map(a=>`<li><span class="mini-ic ic-${a.id}">${ic(a.icon,18)}</span><span><b>${a.name}</b><span>${a.highlights[0]}</span></span></li>`).join('')}</ul></div>
+  <p class="au-side-foot">© ${year} EasySpot</p></aside>
+ <div class="au-main"><header class="au-top"><a class="btn btn-ghost au-back" href="#" data-home>${ic('arrow-left',16)}Home</a>${themeBtn()}</header>
+  <main id="main" tabindex="-1" class="au-card"><h1>${title}</h1><p class="au-lead">${lead}</p>${body}${foot?`<p class="au-foot">${foot}</p>`:''}</main></div></div>`;
+}
+function loginView(){
+ const u=memo.user||EaAuth.remembered();
+ return authShell('Log in','Welcome back. Use your EasySpot account.',`<div class="msg-err" id="formErr" role="alert" hidden></div>
+ <form id="loginForm" novalidate>
+  ${field('user','Username or email',`type="text" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(u)}"`)}
+  ${field('pass','Password','type="password" autocomplete="current-password"',{wrap:true})}
+  <p class="small au-caps" id="capsNote" hidden>${ic('triangle-alert',14)}Caps Lock is on</p>
+  <div class="au-row"><label class="au-check" for="remember"><input type="checkbox" id="remember"${EaAuth.remembered()?' checked':''}><span>Keep me signed in</span></label><a href="#forgot">Forgot password?</a></div>
+  <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Log in</button>
+ </form>`,`New to EasySpot? <a href="#signup">Create an account</a>`);
+}
+function signupView(){
+ return authShell('Create your account','Set up your company on EasySpot. It takes about a minute.',`<form id="signupForm" novalidate>
+  ${field('name','Full name','type="text" autocomplete="name"')}
+  ${field('email','Work email','type="email" autocomplete="email" autocapitalize="none" spellcheck="false"')}
+  ${field('company','Company','type="text" autocomplete="organization"')}
+  <div class="field"><label for="size">Buildings you manage</label><select id="size" name="size"><option value="1">1</option><option value="2-5" selected>2 to 5</option><option value="6-20">6 to 20</option><option value="21+">More than 20</option></select></div>
+  ${field('newpass','Password','type="password" autocomplete="new-password"',{wrap:true,help:'At least 8 characters, with a letter and a number.'})}
+  <div class="au-meter" id="pwMeter" data-score="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p class="small muted" id="pwLabel" aria-live="polite"></p>
+  <div class="field au-terms"><label class="au-check" for="terms"><input type="checkbox" id="terms" aria-describedby="termsErr"><span>I agree to the Terms of Service and Privacy Policy</span></label><div class="err" id="termsErr" role="alert" hidden></div></div>
+  <button type="submit" class="btn btn-primary btn-block btn-lg" id="signupBtn">Create account</button>
+ </form>`,`Already have an account? <a href="#login">Log in</a>`);
+}
+function forgotView(){
+ return authShell('Reset your password','Enter the email or username on your account and we will send a reset link.',`<form id="forgotForm" novalidate>
+  ${field('fuser','Username or email','type="text" autocomplete="username" autocapitalize="none" spellcheck="false"')}
+  <button type="submit" class="btn btn-primary btn-block btn-lg" id="forgotBtn">Send reset link</button>
+ </form>`,`Remembered it? <a href="#login">Back to log in</a>`);
+}
+function doneView(kind){
+ const email=esc(memo.email||'your inbox');
+ const t=kind==='verify'?['Check your email',`We sent a verification link to <b>${email}</b>. Open it to finish setting up your account.`]:['Check your email',`If an account matches <b>${email}</b>, a reset link is on its way. It works for 30 minutes.`];
+ return authShell(t[0],t[1],`<div class="au-done"><span class="au-done-ic">${ic('mail',26)}</span></div>
+ <div class="acts-col"><a class="btn btn-primary btn-block btn-lg" href="#login" id="doneLogin">Back to log in</a><button type="button" class="btn btn-outline btn-block" id="resend">Send it again</button></div>
+ <p class="small muted" style="margin:14px 0 0;text-align:center">Preview build: no email is sent.</p>`,'');
+}
+
+function render(){
+ view=route();busy=false;
+ if((view==='verify'||view==='sent')&&!memo.email){location.hash='login';return}
+ $('#app').innerHTML=view===''?landing():view==='login'?loginView():view==='signup'?signupView():view==='forgot'?forgotView():doneView(view);
+ document.title=({login:'Log in',signup:'Sign up',forgot:'Reset password',verify:'Check your email',sent:'Check your email'}[view]?({login:'Log in',signup:'Sign up',forgot:'Reset password',verify:'Check your email',sent:'Check your email'}[view])+' · ':'')+BRAND;
+ if(view==='login')lockWatch();
+}
+function focusFirst(){const f=view==='login'?($('#user').value?$('#pass'):$('#user')):view==='signup'?$('#name'):view==='forgot'?$('#fuser'):$('#main');f&&f.focus({preventScroll:true});window.scrollTo(0,0)}
+function setErr(id,msg){const i=$('#'+id),e=$('#'+id+'Err');if(!e)return;if(msg){e.hidden=false;e.innerHTML=`${ic('circle-alert',15)}<span>${msg}</span>`;if(i&&i.type!=='checkbox'){i.classList.add('is-err');i.setAttribute('aria-invalid','true')}}else{e.hidden=true;e.innerHTML='';if(i){i.classList.remove('is-err');i.removeAttribute('aria-invalid')}}}
+function formErr(msg){const e=$('#formErr');if(!e)return;e.hidden=!msg;e.innerHTML=msg?`${ic('circle-alert',16)}<span>${msg}</span>`:''}
+function setBusy(btn,on,label){busy=on;btn.disabled=on;if(on){btn.dataset.l=btn.textContent;btn.setAttribute('aria-busy','true');btn.innerHTML=`${ic('refresh-cw',16)}${label}`}else{btn.removeAttribute('aria-busy');btn.textContent=btn.dataset.l||btn.textContent}}
+function lockWatch(){
+ clearInterval(lockTimer);
+ const tick=()=>{const s=EaAuth.lockedFor(),b=$('#loginBtn');if(!b||view!=='login'){clearInterval(lockTimer);return}if(s){b.disabled=true;formErr(`Too many attempts. Try again in ${s} second${s===1?'':'s'}.`)}else{if(!busy)b.disabled=false;if(lockTimer){formErr('');clearInterval(lockTimer);lockTimer=null}}};
+ if(EaAuth.lockedFor()){tick();lockTimer=setInterval(tick,1000)}
+}
+const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+document.addEventListener('submit',e=>{
+ e.preventDefault();if(busy)return;
+ const f=e.target.id;
+ if(f==='loginForm'){
+  const user=$('#user').value.trim(),pass=$('#pass').value;formErr('');setErr('user','');setErr('pass','');
+  if(!user){setErr('user','Enter your username or email.');$('#user').focus();return}
+  if(!pass){setErr('pass','Enter your password.');$('#pass').focus();return}
+  const btn=$('#loginBtn');setBusy(btn,true,'Logging in…');
+  setTimeout(()=>{
+   const r=EaAuth.authenticate(user,pass);
+   if(r.ok){EaAuth.start(r.account,$('#remember').checked);HubContract.go(r.account.page);return}
+   setBusy(btn,false);
+   if(r.reason==='locked'){lockWatch();return}
+   if(r.reason==='unverified'){formErr(`Verify your email to finish setting up. We sent a link to ${esc(r.email)}.`);return}
+   formErr(`That username or password isn't right.${r.left<=2?` ${r.left} attempt${r.left===1?'':'s'} left.`:''}`);
+   const p=$('#pass');p.value='';p.classList.add('is-err');p.setAttribute('aria-invalid','true');p.focus();
+  },550);
+  return}
+ if(f==='signupForm'){
+  const v={name:$('#name').value.trim(),email:$('#email').value.trim(),company:$('#company').value.trim(),size:$('#size').value,pass:$('#newpass').value};
+  const bad={name:v.name.length<2?'Enter your full name.':'',email:!EMAIL.test(v.email)?'Enter a full email address, like name@company.com.':'',company:v.company.length<2?'Enter your company name.':'',newpass:EaAuth.strength(v.pass).miss.length?'Your password still needs '+EaAuth.strength(v.pass).miss.join(' and ')+'.':'',terms:$('#terms').checked?'':'Please agree to the terms to continue.'};
+  let first=null;Object.keys(bad).forEach(k=>{setErr(k,bad[k]);if(bad[k]&&!first)first=k});
+  if(first){$('#'+first).focus();return}
+  const btn=$('#signupBtn');setBusy(btn,true,'Creating your account…');
+  setTimeout(()=>{const r=EaAuth.register(v);setBusy(btn,false);
+   if(!r.ok){setErr('email','An account with this email already exists. Log in instead.');$('#email').focus();return}
+   memo={email:r.email};nav('verify')},650);
+  return}
+ if(f==='forgotForm'){
+  const u=$('#fuser').value.trim();setErr('fuser','');
+  if(!u){setErr('fuser','Enter your username or email.');$('#fuser').focus();return}
+  const btn=$('#forgotBtn');setBusy(btn,true,'Sending…');
+  setTimeout(()=>{setBusy(btn,false);memo={email:u};nav('sent')},550);
+ }
+});
+document.addEventListener('click',e=>{
+ const home=e.target.closest('[data-home]');if(home){e.preventDefault();nav('');return}
+ const t=e.target.closest('button');if(!t)return;
+ if(t.id==='themeBtn'){setTheme(theme==='dark'?'light':'dark');const keep={};document.querySelectorAll('#app input:not([type=password]),#app select').forEach(i=>{keep[i.id]=i.type==='checkbox'?i.checked:i.value});render();Object.keys(keep).forEach(k=>{const i=$('#'+k);if(i){if(i.type==='checkbox')i.checked=keep[k];else i.value=keep[k]}});$('#themeBtn').focus();return}
+ if(t.id==='openWs'){const a=EaAuth.current();if(a)HubContract.go(a.page);else nav('login');return}
+ if(t.dataset.eye){const i=$('#'+t.dataset.eye),show=i.type==='password';i.type=show?'text':'password';t.setAttribute('aria-pressed',show);t.setAttribute('aria-label',show?'Hide password':'Show password');t.innerHTML=ic(show?'eye-off':'eye',18);i.focus();return}
+ if(t.id==='resend'){t.disabled=true;live('Sent again. Give it a minute.');setTimeout(()=>{t.disabled=false},8000);return}
+});
+document.addEventListener('input',e=>{
+ const t=e.target;if(!t.id)return;
+ if($('#'+t.id+'Err')&&!$('#'+t.id+'Err').hidden)setErr(t.id,'');
+ if(t.id==='newpass'){const s=EaAuth.strength(t.value);$('#pwMeter').dataset.score=s.score;$('#pwLabel').textContent=t.value?['','Weak','Fair','Good','Strong'][s.score]+(s.miss.length?' · needs '+s.miss.join(' and '):''):''}
+});
+document.addEventListener('change',e=>{if(e.target.id==='terms'&&e.target.checked)setErr('terms','')});
+document.addEventListener('keyup',e=>{const c=$('#capsNote');if(c&&e.target.type==='password'&&e.getModifierState)c.hidden=!e.getModifierState('CapsLock')});
+addEventListener('hashchange',()=>{render();focusFirst()});
+
+/* Single-file build: the three workspaces travel inside this page and open in a frame over it. */
+function mountPage(page){
+ const src=document.getElementById('ea-page-'+page);if(!src)return false;
+ let f=$('#eaFrame');if(!f){f=document.createElement('iframe');f.id='eaFrame';f.className='ea-frame';document.body.appendChild(f)}
+ f.title=({client:'Hub',staff:'Hub',admin:'Admin console'})[page];
+ f.srcdoc=JSON.parse(src.textContent).replace('<'+'head>','<'+'head><script>window.EA_FRAMED=true;window.EA_STANDALONE=true<\/script>');
+ $('#app').hidden=true;document.querySelector('.skip').hidden=true;return true;
+}
+function unmountPage(){const f=$('#eaFrame');if(f)f.remove();$('#app').hidden=false;document.querySelector('.skip').hidden=false}
+if(window.EA_BUNDLE){
+ HubContract.go=(page,hash)=>{if(page==='index'){unmountPage();nav(hash||'')}else if(HubContract.PAGES.includes(page))mountPage(page)};
+ addEventListener('message',e=>{const f=$('#eaFrame'),d=e.data;if(!f||e.source!==f.contentWindow||!d||typeof d.eaNav!=='string'||!HubContract.PAGES.includes(d.eaNav))return;HubContract.go(d.eaNav,VIEWS.includes(d.hash)?d.hash:'')});
+}
+render();
+if(view!=='')focusFirst();
+</script>
+</body>
+</html>
