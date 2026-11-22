@@ -7,9 +7,10 @@ const APP_REGISTRY=[
   keywords:'parking permits guest passes entries tow spots',
   highlights:['Guest passes and permits','Entries and open spots','Tow requests'],
   lifecycle:'live',
-  /* The real product. It refuses to be framed (X-Frame-Options: DENY), so it opens in its own tab.
+  /* The real product, one entrance per kind of person: account admins go to client., everyone else to staff.
+     It refuses to be framed (X-Frame-Options: DENY), so it opens in its own tab.
      Sample of the receiving side: apps/ops.html. */
-  launch:{type:'url',url:'https://easyspotops.com/',target:'blank',params:['app','companyId','propertyId','role','userId','theme','locale','returnUrl']},
+  launch:{type:'url',url:'https://staff.easyspotops.com/',urlByRole:{account_admin:'https://client.easyspotops.com/'},target:'blank',params:['app','companyId','propertyId','role','userId','theme','locale','returnUrl']},
   requiresSingleProperty:true,allowedRoles:null},
  {id:'home',slug:'home',name:'EasySpotHome',shortName:'Home',category:'Residents',icon:'house',color:'#0F766E',
   description:'Handle building requests faster and make every move-in smooth.',
@@ -73,6 +74,8 @@ function sysConfig(){
 }
 /* An app with no destination yet can't be switched to live or beta. */
 function lifecycleChoices(id){const a=appDef(id);return a&&a.launch&&a.launch.type!=='modal_preview'?LIFECYCLES.slice():['coming_soon','maintenance']}
+/* Where this person's tap lands: the entrance for their role if the app has one, else the default. */
+function launchFor(app,userRole){const l=app.launch,u=l.urlByRole&&l.urlByRole[userRole];return u?Object.assign({},l,{url:u}):l}
 function appLifecycle(id){const a=appDef(id);if(!a)return 'coming_soon';return sysConfig().lifecycle[id]||a.lifecycle}
 
 /* The one answer to "what can this person do with this app, here, now?"

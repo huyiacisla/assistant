@@ -25,7 +25,7 @@ Mở bằng `file://` vẫn hiển thị, nhưng đồng bộ giữa các khung 
 | `client.html` | Hub của account admin + khu quản trị (App access, Staff, Organization) |
 | `staff.html` | Hub của nhân viên |
 | `admin.html` | Console nội bộ EasySpot (Clients, System) — không có Hub |
-| `apps/ops.html` | App con **mẫu** (phía nhận contract). Không đăng ký trong Registry; thẻ EasySpotOps mở `https://easyspotops.com/` |
+| `apps/ops.html` | App con **mẫu** (phía nhận contract). Không đăng ký trong Registry; thẻ EasySpotOps mở `client.` / `staff.easyspotops.com` theo vai trò |
 | `preview.html` | Khung xem 3 vai trò |
 
 Ranh giới: `hub-view.js` chỉ hiển thị + mở app. Mọi thao tác quản trị nằm ở trang vai trò, dưới nhóm "Account admin" hoặc Settings.
@@ -40,7 +40,7 @@ Ranh giới: `hub-view.js` chỉ hiển thị + mở app. Mọi thao tác quản
 |---|---|
 | `id, slug, name, shortName, category, description, icon, color, keywords, highlights` | nhận diện + tìm kiếm |
 | `lifecycle` | `live · beta · coming_soon · maintenance` (admin ghi đè toàn hệ thống trong Settings → System) |
-| `launch` | cách mở + tham số ngữ cảnh truyền đi |
+| `launch` | cách mở + tham số ngữ cảnh truyền đi; `urlByRole` = cửa vào riêng theo vai trò |
 | `requiresSingleProperty` | đang "All buildings" → hỏi chọn tòa nhà trước khi mở |
 | `allowedRoles` | `null` = mọi vai trò |
 
@@ -104,6 +104,7 @@ Quyền đọc/ghi từng khóa: `STORE_READ / STORE_WRITE / STORE_FROM` ở đ�
 - Hết phiên do không hoạt động chỉ áp cho Hub; app con chỉ theo "đăng xuất toàn bộ".
 - Tòa nhà: thêm + đổi tên, chưa xóa.
 - Admin "Reset sample data" không xóa yêu cầu client đã gửi (khóa của client) → hiện lại là pending.
-- Chỉ `EasySpotOps` có đích thật (`https://easyspotops.com/`, tab mới vì trang cấm nhúng iframe); 3 app còn lại `coming_soon`.
+- Chỉ `EasySpotOps` có đích thật: account admin → `https://client.easyspotops.com/`, vai trò khác → `https://staff.easyspotops.com/` (`launch.urlByRole`; tab mới vì trang cấm nhúng iframe); 3 app còn lại `coming_soon`.
+- Chưa đăng nhập → trang Ops chuyển sang `auth.easyspotops.com/login?next=/`: tham số ngữ cảnh rơi mất ở bước này.
 - `easyspotops.com` chưa đọc contract: tham số ngữ cảnh được gửi kèm nhưng trang bỏ qua, người dùng vẫn đăng nhập + chọn tòa nhà ở đó. Muốn liền mạch: trang Ops gọi `HubContract.read(..., {hubOrigins})`.
 - Khác tên miền → chuông Hub (`notifyHub`) và "đăng xuất toàn bộ" không tới được trang Ops (đều dựa `localStorage`); cần backend/SSO.

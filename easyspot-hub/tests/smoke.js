@@ -42,10 +42,10 @@ const SHOT=process.env.SHOTS||'';
  await shot(client,'01-client-hub');
 
  console.log('Launch: building picker, context hand-off, return');
- await ctx.route('https://easyspotops.com/**',r=>r.fulfill({contentType:'text/html',body:'<title>stub</title>'}));
+ await ctx.route('https://*.easyspotops.com/**',r=>r.fulfill({contentType:'text/html',body:'<title>stub</title>'}));
  const [tab]=await Promise.all([ctx.waitForEvent('page'),client.click('[data-k="tile-ops"]').then(()=>client.click('[data-pick="mc"]'))]);
  const ext=new URL(tab.url());
- ok(ext.origin==='https://easyspotops.com'&&ext.searchParams.get('hub')==='1'&&ext.searchParams.get('propertyId')==='prop_102'&&ext.searchParams.get('companyId')==='cli_001','registered app opens the real site in a new tab with the context');
+ ok(ext.origin==='https://client.easyspotops.com'&&ext.searchParams.get('hub')==='1'&&ext.searchParams.get('propertyId')==='prop_102'&&ext.searchParams.get('companyId')==='cli_001','registered app opens the real site in a new tab with the context');
  ok(!ext.searchParams.has('user')&&!ext.searchParams.has('company'),'names are not sent to the external site');
  ok(await client.isVisible('#grid')&&await client.inputValue('#propSel')==='mc','Hub stays open behind the new tab');
  await tab.close();
@@ -67,6 +67,10 @@ const SHOT=process.env.SHOTS||'';
  ok(await client.isVisible('[data-k="qRecent-ops"]'),'opened app is listed under Recent');
  ok(await bell(client)>=1,'app update reached the Hub bell');
  ok(await client.evaluate(()=>document.activeElement&&document.activeElement.dataset.k)==='tile-ops','focus returns to the app tile');
+
+ const [stab]=await Promise.all([ctx.waitForEvent('page'),staff.click('[data-k="tile-ops"]')]);
+ ok(new URL(stab.url()).origin==='https://staff.easyspotops.com'&&new URL(stab.url()).searchParams.get('role')==='property_manager','staff open the staff entrance of the same app');
+ await stab.close();
 
  console.log('Launch: other states');
  await client.click('[data-k="tile-home"]');
