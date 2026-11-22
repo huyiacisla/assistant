@@ -9,6 +9,7 @@ Dữ liệu mẫu, lưu `localStorage`, đồng bộ giữa các vai trò qua `B
 |---|---|
 | Xem | phục vụ thư mục qua HTTP (`python3 -m http.server`) rồi mở `preview.html` |
 | Kiểm thử | `node tests/smoke.js` (cần Playwright + Chromium) |
+| Gộp 1 tệp | `node tools/build-standalone.js` (chạy lại sau mỗi lần sửa `client.html` / `shared/`) |
 
 Mở bằng `file://` vẫn hiển thị, nhưng đồng bộ giữa các khung phụ thuộc trình duyệt → dùng HTTP.
 
@@ -20,6 +21,8 @@ Mở bằng `file://` vẫn hiển thị, nhưng đồng bộ giữa các khung 
 | `shared/hub-view.js` | **Hub thuần**: lưới app, ghim/gần đây, lọc, `launchApp()` |
 | `shared/contract.js` | **Hub Context Contract v1**: tệp duy nhất app con cần |
 | `shared/settings.js` | Cài đặt cá nhân + khung trang Settings |
+| `shared/landing.js` | Trang ngoài của EasySpot Applicator (trước đăng nhập); chỉ `client.html` nạp |
+| `tools/build-standalone.js` → `dist/easyspot-applicator.html` | Gộp `client.html` + mọi thứ nó nạp thành **1 tệp** mở ở đâu cũng được |
 | `shared/chrome.js` | Khung vỏ: sidebar, topbar, tìm kiếm, modal, kho đồng bộ, thông báo |
 | `shared/hub.css` | Token + style dùng chung (Hub và app con) |
 | `client.html` | Hub của account admin + khu quản trị (App access, Staff, Organization) |
@@ -97,6 +100,10 @@ Bắt buộc: `app, companyId, role, userId, returnUrl`; app tự khai thêm (`r
 Quyền đọc/ghi từng khóa: `STORE_READ / STORE_WRITE / STORE_FROM` ở đầu mỗi trang vai trò.
 
 ## Giới hạn đã biết
+
+- Lần đầu mở `client.html` → trang ngoài, bấm "Continue as …" mới vào Hub. `staff.html` / `admin.html` vẫn mở thẳng.
+- Bản 1 tệp không có console admin đi kèm → tự nạp tài khoản mẫu, bỏ link sang `staff.html` / `admin.html`.
+- Phông Inter + Space Grotesk tải từ Google Fonts; ngoại tuyến thì rơi về phông hệ thống.
 
 - Bản xem trước: không xác thực thật; app con tin ngữ cảnh trên URL. Bản thật phải kiểm quyền phía máy chủ.
 - Chỉ tiếng Anh; ngôn ngữ khác hiện "coming soon".

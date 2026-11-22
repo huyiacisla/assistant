@@ -107,15 +107,15 @@ function beginLaunch(k,opener,prop){
   if(f==='noaccess'||!appSt(k).launchable){launchProblem(k,opener,'noaccess');return}
   pushRecent(k);uiSave();
   const url=HubContract.build(launchFor(app,me().role),hubLaunchCtx(k,prop));
-  if(app.launch.target==='blank'){const w=window.open(url,'_blank');if(!w){launchProblem(k,opener,'blocked');return}try{w.opener=null}catch(e){}render();live(`${app.name} opened in a new tab.`);return}
+  if(app.launch.target==='blank'){const w=window.open(url,'_blank');if(!w){launchProblem(k,opener,'blocked',url);return}try{w.opener=null}catch(e){}render();live(`${app.name} opened in a new tab.`);return}
   location.assign(url);
  },450);
 }
-function launchProblem(k,opener,why){
+function launchProblem(k,opener,why,url){
  const n=appDef(k).name,canAsk=typeof requestModal==='function'&&!(typeof isViewer==='function'&&isViewer());
- const text={offline:`You're offline. ${n} will open when you're back online.`,error:`We couldn't open ${n}. Please try again.`,blocked:`Your browser blocked the new tab. Allow pop-ups for the Hub, then try again.`,noaccess:`You don't have access to ${n} yet.${canAsk?'':' Ask your account admin to check your access, or contact us from Help.'}`}[why];
- const act=why==='noaccess'?(canAsk?'<button type="button" class="btn btn-primary btn-block" id="naRequest">Request access</button>':'<button type="button" class="btn btn-primary btn-block" id="naHelp">Contact support</button>'):'<button type="button" class="btn btn-primary btn-block" id="lpRetry">Try again</button>';
- const m=openModal('launchModal',`<div class="am-top"><span class="am-ic ic-${k}">${ic(appDef(k).icon,40)}</span><h2 id="launchModal-t">${why==='noaccess'?'No access yet':"Couldn't open "+n}</h2></div><div class="msg-err" id="${why==='noaccess'?'openNoAccess':'openErr'}" role="alert">${ic(why==='noaccess'?'lock':'triangle-alert',16)}<span>${text}</span></div><div class="acts-col" style="margin-top:12px">${act}<button type="button" class="btn btn-outline btn-block" data-close>Close</button></div>`,{opener});
+ const text={offline:`You're offline. ${n} will open when you're back online.`,error:`We couldn't open ${n}. Please try again.`,blocked:`${n} opens in a new tab, and your browser held it back. Use the button below to open it.`,noaccess:`You don't have access to ${n} yet.${canAsk?'':' Ask your account admin to check your access, or contact us from Help.'}`}[why];
+ const act=why==='noaccess'?(canAsk?'<button type="button" class="btn btn-primary btn-block" id="naRequest">Request access</button>':'<button type="button" class="btn btn-primary btn-block" id="naHelp">Contact support</button>'):why==='blocked'&&url?`<a class="btn btn-primary btn-block" id="lpLink" href="${esc(url)}" target="_blank" rel="noopener">Open ${n}</a>`:'<button type="button" class="btn btn-primary btn-block" id="lpRetry">Try again</button>';
+ const m=openModal('launchModal',`<div class="am-top"><span class="am-ic ic-${k}">${ic(appDef(k).icon,40)}</span><h2 id="launchModal-t">${why==='noaccess'?'No access yet':why==='blocked'?'Open '+n:"Couldn't open "+n}</h2></div><div class="msg-err" id="${why==='noaccess'?'openNoAccess':'openErr'}" role="alert">${ic(why==='noaccess'?'lock':'triangle-alert',16)}<span>${text}</span></div><div class="acts-col" style="margin-top:12px">${act}<button type="button" class="btn btn-outline btn-block" data-close>Close</button></div>`,{opener});
  const back=()=>document.querySelector(`[data-k="tile-${k}"]`)||opener;
  const on=(id,f)=>{const b=m.querySelector(id);if(b)b.onclick=()=>{closeModal({noReturn:true});f()}};
  on('#lpRetry',()=>launchApp(k,back()));

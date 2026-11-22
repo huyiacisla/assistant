@@ -18,13 +18,32 @@ const SHOT=process.env.SHOTS||'';
  await new Promise(r=>server.listen(0,r));
  const base='http://localhost:'+server.address().port+'/';
  const browser=await chromium.launch();
+ const shot=async(p,n)=>{if(SHOT)await p.screenshot({path:path.join(SHOT,n.replace('/','-')+'.png')})};
+ console.log('Landing and single-file build');
+ require('child_process').execFileSync('node',[path.join(ROOT,'tools','build-standalone.js')]);
+ for(const [file,label] of [['client','landing'],['dist/easyspot-applicator','single file']]){
+  const c=await browser.newContext({viewport:{width:1280,height:900}}),p=await c.newPage();
+  p.on('pageerror',e=>errors.push(label+': '+e.message));
+  await p.goto(base+file+'.html');
+  ok(await p.isVisible('#landing')&&await p.locator('.ld-app').count()===4,label+': first visit lands on the public page with every app');
+  await shot(p,file==='client'?'06-landing':'07-standalone-landing');
+  if(file==='client'){await p.setViewportSize({width:360,height:740});ok(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'landing: no sideways scroll at 360px');await shot(p,'06-landing-phone');await p.setViewportSize({width:1280,height:900})}
+  await p.click('#signIn');
+  ok(await p.locator('#grid .tile').count()===4,label+': sign-in opens the Hub');
+  if(file!=='client'){ok(await p.getAttribute('[data-k="tile-ops"]','data-state')==='open'&&await p.locator('.ld-other').count()===0,'single file: starts with the sample account, no links to other files');await shot(p,'08-standalone-hub')}
+  await p.click('#avBtn');await p.click('#miSignout');
+  ok(await p.isVisible('#landing'),label+': signing out returns to the public page');
+  await c.close();
+ }
+
  const ctx=await browser.newContext({viewport:{width:1280,height:900}});
+ /* The flows below start signed in, as a returning person would be. */
+ await ctx.addInitScript(()=>{try{if(!localStorage.getItem('ea-session:u_001'))localStorage.setItem('ea-session:u_001',JSON.stringify({in:1}))}catch(e){}});
  const open=async name=>{const p=await ctx.newPage();p.on('pageerror',e=>errors.push(name+': '+e.message));p.on('console',m=>{if(m.type()==='error')errors.push(name+' console: '+m.text())});await p.goto(base+name+'.html');return p};
  const state=(p,k)=>p.getAttribute(`[data-k="tile-${k}"]`,'data-state');
  const chip=(p,k)=>p.innerText(`#tc-${k}`);
  const bell=async p=>{const t=await p.getAttribute('#bellBtn','aria-label');const m=t.match(/(\d+) new/);return m?+m[1]:0};
  const settle=p=>p.waitForTimeout(450);
- const shot=async(p,n)=>{if(SHOT)await p.screenshot({path:path.join(SHOT,n+'.png')})};
 
  console.log('Registry and first paint');
  const admin=await open('admin');

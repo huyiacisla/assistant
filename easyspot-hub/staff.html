@@ -7,6 +7,8 @@
 <title>EasySpot · Hub</title>
 <meta name="description" content="Open the EasySpot apps you were given and request access to more.">
 <script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
 <link rel="stylesheet" href="shared/hub.css">
 </head>
 <body>
@@ -84,7 +86,7 @@ function sidebarHTML(){
  <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('hub','Apps','layers')}</nav>`;
 }
 
-function readApps(){const o=storeGet(AMC_APPS);const apps=o&&o.v===1?validApps(o.apps):null;return apps||emptyApps()}
+function readApps(){const o=storeGet(AMC_APPS);if(!o)return defaultApps();/* EasySpot's console hasn't run here yet: assume its starting catalog */const apps=o.v===1?validApps(o.apps):null;return apps||emptyApps()}
 function seedStores(){}
 function applyShared(){
  S.catalog=readApps();

@@ -200,6 +200,7 @@ function topbarHTML(){
 
 function sessionHTML(){
  const out=S.session==='out';
+ if(out&&typeof landingHTML==='function')return landingHTML();
  const signed=typeof SIGNOUT_LINE==='string'?SIGNOUT_LINE:"You're signed out of every EasySpot app.";
  return `<main class="signedout" id="main" tabindex="-1"><div class="card" id="${out?'signedOut':'sessionEnded'}"><span class="sb-logo" style="margin:0 auto 12px;width:48px;height:48px">${ic(out?'log-out':'clock',22)}</span><h1>${out?"You're signed out":'Your session ended'}</h1><p class="muted">${out?signed:'Sign in again to pick up where you left off.'}</p><button type="button" class="btn btn-primary btn-block" id="signIn" data-k="sign-in">${out?'Sign in':'Sign in again'}</button><p class="small muted">Demo sign-in, no password needed (Sample).</p></div></main>`;
 }
@@ -340,4 +341,5 @@ const UI_KEYS=['view','tab','prop','now','accessTab','staffPanel','matrixUser','
 function uiKey(){return 'ea-hub-ui:'+storeRole()}
 function uiSave(){try{const o={};UI_KEYS.forEach(k=>{if(S[k]!==undefined&&S[k]!==null)o[k]=S[k]});sessionStorage.setItem(uiKey(),JSON.stringify(o))}catch(e){}}
 function uiRestore(){let o=null;try{o=JSON.parse(sessionStorage.getItem(uiKey())||'null')}catch(e){}if(!o||typeof o!=='object')return false;UI_KEYS.forEach(k=>{if(o[k]!==undefined&&k in S&&(S[k]===null||typeof o[k]===typeof S[k]))S[k]=o[k]});if(S.view==='nf')S.view=S.homeView;return true}
-function bootSession(){if(HubContract.signedOut(me().id))S.session='out'}
+/* A page with a landing (START_SIGNED_OUT) greets a first-time visitor there; the others open signed in. */
+function bootSession(){let seen=true;try{seen=!!localStorage.getItem(HubContract.sessionKey(me().id))}catch(e){}if(HubContract.signedOut(me().id)||(typeof START_SIGNED_OUT!=='undefined'&&START_SIGNED_OUT&&!seen))S.session='out'}
