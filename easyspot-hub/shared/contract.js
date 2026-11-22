@@ -14,12 +14,13 @@
  const CHANNEL='ea-store';
 
  /* Only ever go back to a page on this origin: no open redirects, no script URLs. */
- function safeUrl(u,base){
+ function safeUrl(u,base,hubOrigins){
   try{
    const here=new URL(base||root.location.href),x=new URL(String(u),here);
    if(!/^(https?|file):$/.test(x.protocol))return null;
-   if(x.protocol!==here.protocol||x.host!==here.host)return null;
-   return x.href;
+   if(x.protocol===here.protocol&&x.host===here.host)return x.href;
+   /* An app on another site lists the Hub origins it trusts, e.g. ['https://hub.example.com']. */
+   return x.protocol==='https:'&&Array.isArray(hubOrigins)&&hubOrigins.indexOf(x.origin)>=0?x.href:null;
   }catch(e){return null}
  }
 
@@ -35,14 +36,14 @@
   if(q.get('hub')!==String(VERSION))errors.push('hub');
   FIELDS.forEach(k=>{const v=q.get(k);if(v!=null&&v!=='')ctx[k]=v});
   REQUIRED.concat(o.require||[]).forEach(k=>{if(!ctx[k])errors.push(k)});
-  if(ctx.returnUrl){const s=safeUrl(ctx.returnUrl,o.base);if(s)ctx.returnUrl=s;else{delete ctx.returnUrl;if(errors.indexOf('returnUrl')<0)errors.push('returnUrl')}}
+  if(ctx.returnUrl){const s=safeUrl(ctx.returnUrl,o.base,o.hubOrigins);if(s)ctx.returnUrl=s;else{delete ctx.returnUrl;if(errors.indexOf('returnUrl')<0)errors.push('returnUrl')}}
   if(ctx.theme!=='dark'&&ctx.theme!=='light')delete ctx.theme;
   if(o.app&&ctx.app&&ctx.app!==o.app)errors.push('app');
   return {ok:!errors.length,ctx,errors};
  }
 
- function backUrl(ctx,info){
-  const base=ctx&&ctx.returnUrl?safeUrl(ctx.returnUrl):null;
+ function backUrl(ctx,info,opts){
+  const base=ctx&&ctx.returnUrl?safeUrl(ctx.returnUrl,null,opts&&opts.hubOrigins):null;
   if(!base)return null;
   const payload=Object.assign({app:ctx.app},info||{});
   return base.split('#')[0]+RETURN_MARK+encodeURIComponent(JSON.stringify(payload));

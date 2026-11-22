@@ -107,7 +107,7 @@ function beginLaunch(k,opener,prop){
   if(f==='noaccess'||!appSt(k).launchable){launchProblem(k,opener,'noaccess');return}
   pushRecent(k);uiSave();
   const url=HubContract.build(app.launch,hubLaunchCtx(k,prop));
-  if(app.launch.target==='blank'){const w=window.open(url,'_blank','noopener');if(!w)launchProblem(k,opener,'blocked');else render();return}
+  if(app.launch.target==='blank'){const w=window.open(url,'_blank');if(!w){launchProblem(k,opener,'blocked');return}try{w.opener=null}catch(e){}render();live(`${app.name} opened in a new tab.`);return}
   location.assign(url);
  },450);
 }

@@ -42,6 +42,15 @@ const SHOT=process.env.SHOTS||'';
  await shot(client,'01-client-hub');
 
  console.log('Launch: building picker, context hand-off, return');
+ await ctx.route('https://easyspotops.com/**',r=>r.fulfill({contentType:'text/html',body:'<title>stub</title>'}));
+ const [tab]=await Promise.all([ctx.waitForEvent('page'),client.click('[data-k="tile-ops"]').then(()=>client.click('[data-pick="mc"]'))]);
+ const ext=new URL(tab.url());
+ ok(ext.origin==='https://easyspotops.com'&&ext.searchParams.get('hub')==='1'&&ext.searchParams.get('propertyId')==='prop_102'&&ext.searchParams.get('companyId')==='cli_001','registered app opens the real site in a new tab with the context');
+ ok(!ext.searchParams.has('user')&&!ext.searchParams.has('company'),'names are not sent to the external site');
+ ok(await client.isVisible('#grid')&&await client.inputValue('#propSel')==='mc','Hub stays open behind the new tab');
+ await tab.close();
+ /* The rest of the hand-off is checked against the bundled sample app (same site as the Hub). */
+ await client.evaluate(()=>{appDef('ops').launch={type:'url',url:'apps/ops.html',target:'self',params:HubContract.FIELDS};setHubProp('all');render()});
  await client.click('[data-k="tile-ops"]');
  ok(await client.isVisible('#propModal'),'ops needs one building: picker opens when "All buildings"');
  await client.click('[data-pick="lp"]');
@@ -164,6 +173,7 @@ const SHOT=process.env.SHOTS||'';
  ok(await app.isVisible('#ctxMissing'),'app opened without the Hub refuses to guess a context');
  await app.goto(base+'apps/ops.html?hub=1&app=ops&companyId=cli_001&propertyId=prop_101&property=Linden+Park&role=viewer&userId=u_001&returnUrl='+encodeURIComponent('https://example.com/'));
  ok(await app.isVisible('#ctxMissing'),'app rejects a return address on another site');
+ ok(await app.evaluate(()=>HubContract.safeUrl('https://hub.example.com/x',null,['https://hub.example.com'])==='https://hub.example.com/x'&&HubContract.safeUrl('https://evil.example.com/x',null,['https://hub.example.com'])===null),'app on another site returns only to Hub origins it lists');
  await client.click('#avBtn');await client.click('#miSignout');
  await app.goto(base+'apps/ops.html?hub=1&app=ops&companyId=cli_001&propertyId=prop_101&property=Linden+Park&role=viewer&userId=u_001&returnUrl='+encodeURIComponent(base+'client.html'));
  ok((await app.innerText('#main')).includes("You're signed out"),'signing out of the Hub closes the app too');

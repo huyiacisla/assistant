@@ -7,7 +7,9 @@ const APP_REGISTRY=[
   keywords:'parking permits guest passes entries tow spots',
   highlights:['Guest passes and permits','Entries and open spots','Tow requests'],
   lifecycle:'live',
-  launch:{type:'url',url:'apps/ops.html',target:'self',params:['app','companyId','company','propertyId','propertyKey','property','role','userId','user','theme','locale','dateFormat','timeZone','returnUrl']},
+  /* The real product. It refuses to be framed (X-Frame-Options: DENY), so it opens in its own tab.
+     Sample of the receiving side: apps/ops.html. */
+  launch:{type:'url',url:'https://easyspotops.com/',target:'blank',params:['app','companyId','propertyId','role','userId','theme','locale','returnUrl']},
   requiresSingleProperty:true,allowedRoles:null},
  {id:'home',slug:'home',name:'EasySpotHome',shortName:'Home',category:'Residents',icon:'house',color:'#0F766E',
   description:'Handle building requests faster and make every move-in smooth.',
