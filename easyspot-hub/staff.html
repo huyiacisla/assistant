@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>EasySpot · Hub</title>
+<meta name="description" content="Open the EasySpot apps you were given and request access to more.">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get('theme')||localStorage.getItem('ea-web-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var c=document.documentElement.classList;c.remove('light','dark');c.add(t)})()</script>
+<link rel="stylesheet" href="shared/hub.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="demo-strip" id="demoStrip" role="region" aria-label="Demo controls"><span class="lbl">Demo · Preview</span><span class="grow"></span><button type="button" class="btn" id="demoBtn" data-k="demo-btn">Options</button></div>
+<div id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const BRAND='EasySpot';
+const CLIENT_COMPANY='AMC LLC';
+const GLOBAL_COMPANY=CLIENT_COMPANY;
+</script>
+<script src="shared/contract.js"></script>
+<script src="shared/registry.js"></script>
+<script src="shared/settings.js"></script>
+<script src="shared/chrome.js"></script>
+<script src="shared/hub-view.js"></script>
+<script>
+const PROFILE_INTRO='Your details in this Hub.';
+const SIGNOUT_LINE="You're signed out of the Hub and every EasySpot app.";
+const AMC_APPS='ea:cli_001:apps';
+const AMC_ENT='ea:cli_001:ent';
+const AMC_GRANTS='ea:cli_001:grants:u_002';
+const AMC_REQS='ea:cli_001:requests:u_002';
+const backBtn=()=>`<button type="button" class="btn btn-outline back-btn" data-k="back-hub" data-go="hub">${ic('arrow-left',16)}Back to Apps</button>`;
+const AMC_ORG='ea:cli_001:org';
+const AMC_STAFF='ea:cli_001:staff';
+const STORE_ROLE='staff';
+const NOTE_TOPICS=()=>['u_002','cli_001','all'];
+const STORE_FROM=()=>({[AMC_APPS]:['admin'],[SYS_KEY]:['admin'],[AMC_ENT]:['client'],[AMC_ORG]:['client'],[AMC_STAFF]:['client'],[AMC_GRANTS]:['client'],[AMC_REQS]:['client','staff'],'ea:notes:u_002:*':['client','app'],'ea:notes:cli_001:*':['admin','client'],'ea:notes:all:*':['admin']});
+const STORE_WRITE=()=>[AMC_REQS,'ea:notes:u_002:staff','ea:notes:cli_001.admins:staff'];
+const STORE_READ=()=>[AMC_APPS,SYS_KEY,AMC_ENT,AMC_ORG,AMC_STAFF,AMC_GRANTS,AMC_REQS,'ea:notes:u_002:*','ea:notes:cli_001:*','ea:notes:all:*'];
+const REQ_TTL=()=>S.reqTtlDays;
+let PROPS=[{k:'lp',name:'Linden Park',id:'prop_101'},{k:'mc',name:'Maple Court',id:'prop_102'}];
+const P=k=>PROPS.find(p=>p.k===k);
+const ROLES={property_manager:'Property manager',leasing:'Leasing',maintenance:'Maintenance',viewer:'Viewer',unset:'Not set up'};
+const fresh=()=>({
+ session:'ok',view:'hub',homeView:'hub',tab:'all',q:'',prop:'lp',reqTtlDays:14,now:0,loading:false,offline:false,failNext:null,
+ ent:{ops:{st:'none'},home:{st:'none'},evt:{st:'none'},fin:{st:'none'}},
+ grants:[],reqs:[],
+ me:{id:'u_002',name:'Maria Lopez',email:'maria.lopez@amcllc.sample',role:'property_manager',props:['lp']}});
+let S=fresh();
+const me=()=>S.me;
+const isViewer=()=>me().role==='viewer';
+const badRole=()=>!ROLES[me().role]||me().role==='unset';
+function curProp(){return S.prop}
+function grantFor(app,prop){return S.grants.find(g=>g.app===app&&g.prop===prop)}
+function lastReq(app,prop){return S.reqs.filter(r=>r.app===app&&r.prop===prop).sort((a,b)=>String(b.id).localeCompare(String(a.id)))[0]}
+function catalogOn(k){return !!(S.catalog&&S.catalog[k])}
+/* What the Hub (shared/hub-view.js) needs to know about this person. */
+function hubStateCtx(){return {role:'staff',userRole:me().role,catalog:S.catalog,ent:S.ent,grants:S.grants,reqs:S.reqs,prop:S.prop,now:S.now,viewer:isViewer()}}
+const hubProps=()=>PROPS.filter(p=>me().props.includes(p.k));
+const hubPropChoices=()=>hubProps().map(p=>[p.k,p.name]);
+const PROP_ID=k=>(P(k)||{}).id||null;
+function hubNotice(all,tab){
+ if(tab!=='all'||all.some(s=>s.ready))return '';
+ return `<div class="note" id="pmNoneNote">${ic('info',16)}<span>No apps granted to you yet. ${isViewer()?'Ask your admin for access to the app you need.':all.some(s=>s.state==='request_access')?'Pick an app below to request access.':all.some(s=>s.state==='pending')?'Your request is with your account admin.':'Your account has no apps yet. Ask your account admin to add one.'}</span></div>`;
+}
+function hubEmpty(tab){return tab==='ready'?{text:isViewer()?'Next step: ask your admin for access. Apps they give you show up here. Still stuck? Use <b>Help</b>.':'Next step: open <b>All apps</b> and tap an app to request access from your account admin. Still stuck? Use <b>Help</b>.'}:null}
+const ENUM=APP_STATES;
+window.__events=window.__events||[];
+const DEBUG=()=>{try{return new URLSearchParams(location.search).has('debug')||location.hash==='#debug'}catch(e){return false}};
+let evCtx=null,evSeen=new Set();
+function track(ev){if(ev.tile_state&&!ENUM.includes(ev.tile_state))return;const ctx=['staff',me().id,S.view,curTab(),S.prop].join('|');if(ctx!==evCtx){evCtx=ctx;evSeen=new Set()}const key=[ev.app_id,ev.tile_state,ev.property_id,ev.request_status||''].join('|');if(evSeen.has(key))return;evSeen.add(key);window.__events.push(ev);if(DEBUG()){try{console.log('[event]',JSON.stringify(ev))}catch(e){}}}
+function reqStatus(k){const r=lastReq(k,curProp());if(!r)return null;return REQ_STATE[reqViewSt(r)].event}
+function emitTile(k,s){const ev={event:'tile_view',tile_state:s.state,lifecycle:s.lifecycle,app_id:k,property_id:PROP_ID(curProp()),account_id:'acct_001',user_id:me().id,role:'staff',legacy_role:'pm'};const rs=reqStatus(k);if(rs)ev.request_status=rs;track(ev)}
+function notFoundView(){return `<div class="full" id="notFound"><span class="e-ic">${ic('search',30)}</span><h1>Not found</h1><p>We couldn't find that page in your workspace.</p><button type="button" class="btn btn-primary" data-k="back-hub" data-go="hub">Back to Hub</button></div>`}
+
+function sidebarHTML(){
+ const blocked=badRole();
+ const props=PROPS.filter(p=>me().props.includes(p.k));
+ const navBtn=(v,label,icn)=>`<button type="button" class="sb-item" data-k="nav-${v}" data-go="${v}"${S.view===v||(v==='hub'&&S.view==='nf')?' aria-current="page"':''}>${ic(icn,18)}<span>${label}</span></button>`;
+ return brandSide()+
+ `${blocked?'':`<div class="sb-ws"><span class="k">Account</span><span class="v">${esc(CLIENT_COMPANY)} <span class="sample" style="color:#A9B5C9;border-color:#5B6B82">Sample</span></span><label class="k" for="propSel">Building</label><select id="propSel" data-k="prop-sel">${props.map(p=>`<option value="${p.k}"${S.prop===p.k?' selected':''}>${p.name}</option>`).join('')}</select></div>`}
+ <nav class="sb-nav" aria-label="Main">${blocked?'':navBtn('hub','Apps','layers')}</nav>`;
+}
+
+function readApps(){const o=storeGet(AMC_APPS);const apps=o&&o.v===1?validApps(o.apps):null;return apps||emptyApps()}
+function seedStores(){}
+function applyShared(){
+ S.catalog=readApps();
+ const org=storeGet(AMC_ORG);
+ if(org&&org.v===1){
+  if(Array.isArray(org.props)){const ps=org.props.filter(p=>p&&/^[a-z0-9]{1,12}$/.test(p.k)&&typeof p.name==='string'&&/^[^<>&"]{2,40}$/.test(p.name.trim())&&/^prop_\d+$/.test(p.id)).map(p=>({k:p.k,name:p.name.trim().slice(0,40),id:p.id}));if(ps.length)PROPS=ps.slice(0,8)}
+  S.reqTtlDays=org.policy&&[7,14,30].includes(org.policy.reqTtlDays)?org.policy.reqTtlDays:14}
+ const stf=storeGet(AMC_STAFF),rec=stf&&stf.v===1&&Array.isArray(stf.staff)?stf.staff.find(u=>u&&u.id===S.me.id):null;
+ if(rec&&!S.me._r){if(ROLES[rec.role]&&rec.role!=='unset')S.me.role=rec.role;const ps=Array.isArray(rec.props)?rec.props.filter(p=>P(p)):[];if(ps.length)S.me.props=ps}
+ if(!S.me.props.includes(S.prop))S.prop=S.me.props[0];
+ const ent=storeGet(AMC_ENT);
+ if(ent&&ent.v===1&&ent.ent)S.ent=Object.assign(emptyEnt(),JSON.parse(JSON.stringify(ent.ent)));
+ const g=storeGet(AMC_GRANTS);
+ if(g&&g.v===1&&Array.isArray(g.grants))S.grants=g.grants.filter(x=>x&&APP_KEYS.includes(x.app)).map(x=>({user:me().id,app:x.app,prop:x.prop,on:x.on}));
+ const q=storeGet(AMC_REQS);
+ if(q&&q.v===1&&Array.isArray(q.reqs))S.reqs=q.reqs.filter(r=>r&&r.id&&APP_KEYS.includes(r.app)).map(r=>Object.assign({},r,{user:me().id,kind:'access'}));
+}
+function collectShared(){
+ storeSet(AMC_REQS,{v:1,reqs:(S.reqs||[]).map(r=>({id:r.id,app:r.app,prop:r.prop,st:r.st,day:r.day,reason:r.reason,note:r.note}))});
+}
+
+
+function render(){
+ const root=$('#app');
+ const keep=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.k:null;
+ const caret=document.activeElement&&document.activeElement.id==='hdrSearch'?document.activeElement.selectionStart:null;
+ if(S.session!=='ok'){drawerOpen=false;root.innerHTML=sessionHTML();return}
+ ensureShell();
+ $('#sidebar').innerHTML=sidebarHTML();
+ paintTopbar();
+ $('#offline').hidden=!S.offline;
+ let v;
+ if(badRole())v=blockerView();
+ else if(S.view==='hub')v=hubView();
+ else if(S.view==='profile')v=profileView();
+ else if(S.view==='settings')v=settingsView();
+ else v=notFoundView();
+ $('#main').innerHTML=v;$('#main').classList.toggle('wide',S.view==='hub'&&!badRole());uiSave();
+ document.title=`${BRAND} · ${badRole()?'Hub':({hub:'Hub',profile:'Account profile',settings:'Settings'}[S.view]||'Not found')}`;
+ if(keep&&!document.querySelector('.scrim')){const el=document.querySelector(`[data-k="${keep}"]`);if(el&&el!==document.activeElement){el.focus({preventScroll:true});if(caret!=null&&el.setSelectionRange)el.setSelectionRange(caret,caret)}}
+}
+
+function requestModal(k,opener){
+ const a=A(k),u=me(),props=PROPS.filter(p=>u.props.includes(p.k)),last=lastReq(k,curProp()),lastSt=last?reqViewSt(last):null;
+ const prev=lastSt==='denied'?`<p class="why" id="rqPrev">${ic('circle-x',15)}<span>Your last request wasn't approved.${last.note?' Note from your admin: “'+esc(last.note)+'”':''}</span></p>`:lastSt==='expired'?`<p class="why" id="rqPrev">${ic('clock',15)}<span>Your last request expired after ${reqTtl()} days. You can send it again.</span></p>`:'';
+ const m=openModal('reqModal',`<h2 id="reqModal-t">Request access</h2><p class="lead">Ask your account admin for ${a.name}. Your admin will review your request, and it stays open for ${reqTtl()} days.</p>${prev}
+ <div class="field"><label for="rqProp">Building</label><select id="rqProp">${props.map(p=>`<option value="${p.k}"${p.k===curProp()?' selected':''}>${p.name}</option>`).join('')}</select></div>
+ <div class="field"><label for="rqReason">Why do you need it?</label><textarea id="rqReason" aria-describedby="rqHelp rqErr" placeholder="For example: I handle guest parking at this building"></textarea><span class="help" id="rqHelp"><span id="rqCount">0</span> characters · at least 10</span><div class="err" id="rqErr" role="alert" hidden></div></div>
+ <div class="acts-col sticky-acts"><button type="button" class="btn btn-primary btn-block" id="rqSend">Send request</button><p class="why" id="rqDup" hidden>${ic('clock',15)}<span>Request already pending</span></p><button type="button" class="btn btn-outline btn-block" data-close>Cancel</button></div>`,{opener,focus:'#rqReason'});
+ const ta=m.querySelector('#rqReason'),err=m.querySelector('#rqErr'),send=m.querySelector('#rqSend'),dup=m.querySelector('#rqDup'),pr=m.querySelector('#rqProp');
+ const check=()=>{const r=lastReq(k,pr.value);const isDup=r&&reqViewSt(r)==='pending';send.disabled=!!isDup;dup.hidden=!isDup;isDup?send.setAttribute('aria-describedby','rqDup'):send.removeAttribute('aria-describedby');if(isDup)dup.querySelector('span').textContent=`Request already pending · sent ${day(r.day)} (Sample)`;return !isDup};
+ check();pr.onchange=check;
+ ta.addEventListener('input',()=>{m.querySelector('#rqCount').textContent=ta.value.trim().length;if(!err.hidden&&ta.value.trim().length>=10){err.hidden=true;ta.classList.remove('is-err');ta.removeAttribute('aria-invalid')}});
+ send.onclick=()=>{
+  if(!check())return;
+  const v=ta.value.trim();
+  if(v.length<10){err.hidden=false;err.textContent='';const n=v.length;setTimeout(()=>{err.innerHTML=`${ic('circle-alert',15)}<span>Please write at least 10 characters (you have ${n}).</span>`},30);ta.classList.add('is-err');ta.setAttribute('aria-invalid','true');ta.focus();return}
+  const nid=nextReqId(S.reqs);S.reqs.push({id:nid,user:me().id,kind:'access',app:k,prop:pr.value,reason:v,st:'pending',day:S.now});pushShared();notify('cli_001.admins','req',`${u.name} asked for ${a.name} at ${P(pr.value).name}.`);note(`You asked for ${a.name} at ${P(pr.value).name}.`,'req');
+  closeModal();live(`Request sent. We'll let you know when your admin answers.`);};
+}
+
+function demoModal(opener){
+ const u=me();
+ const b=(id,t)=>`<button type="button" class="btn btn-outline btn-block" id="${id}">${t}</button>`;
+ const m=openModal('demoModal',`<h2 id="demoModal-t">Demo options</h2><p class="lead">These only change this demo. Everything here is Sample data.</p>
+ <h3 style="margin-top:14px">Set up</h3><div class="stack" style="margin-top:8px">${b('dReset','Start with no apps granted')}${b('dSample','Reset sample data')}</div>
+ <h3 style="margin-top:14px">Opening apps</h3><div class="stack" style="margin-top:8px">${b('dFail','Make the next Open fail')}${b('dNoAcc','Make the next Open find no access')}${b('dSession','End the session')}${b('dOffline',S.offline?'Go back online':'Go offline')}</div>
+ <h3 style="margin-top:14px">People and time</h3><div class="stack" style="margin-top:8px">${b('dBad',badRole()?'Fix the account role':'Make this account not set up')}${b('dDays','Skip ahead 15 days')}${b('dOutside','Open a page from another workspace')}</div>`,{opener});
+ const act=(id,f,msg)=>{m.querySelector('#'+id).onclick=()=>{f();closeModal();if(typeof render==='function')render();if(msg)live(msg)}};
+ act('dReset',()=>{const now=S.now;S=fresh();S.now=now;S.catalog=readApps();S.ent=emptyEnt();S.grants=[];S.reqs=[];},'Started with no apps granted.');
+ act('dSample',()=>{const now=S.now;S=fresh();S.now=now;applyShared();},'Sample data reset.');
+ act('dFail',()=>{S.failNext='error'},'The next Open will fail once.');
+ act('dNoAcc',()=>{S.failNext='noaccess'},'The next Open will find no access.');
+ m.querySelector('#dSession').onclick=()=>{closeAll();S.session='expired';render();$('#signIn').focus()};
+ act('dOffline',()=>{S.offline=!S.offline});
+ act('dBad',()=>{const x=me();if(badRole())x.role=x._r||'property_manager';else{x._r=x.role;x.role='unset'}$('#toast').textContent='';clearTimeout(live.t)});
+ act('dDays',()=>{S.now+=15},'Skipped ahead 15 days.');
+ act('dOutside',()=>{S.view='nf'});
+}
+
+function helpItems(){return [
+ ['Can\'t find an app?',isViewer()?'Ask your admin for access to the app you need.':'Open <b>All apps</b>, tap the app and request access with a short reason (10+ characters).'],
+ ['Pending approval?',`Your account admin gets a notification. Requests stay open for ${reqTtl()} days.`],
+ ['Pin what you use','Tap the pin on an app to keep it at the top of your Hub.'],
+ ['Profile and sign out','Tap your name in the header.']
+]}
+
+function handleRoleClick(t){
+ if(handleHubClick(t))return;
+}
+
+document.addEventListener('change',e=>{
+ if(e.target.id==='propSel'){const v=e.target.value;if(!me().props.includes(v)){S.view='nf'}else setHubProp(v);S.loading=true;render();live('Switching building…');setTimeout(()=>{S.loading=false;render();live('Building switched.')},450)}
+});
+
+bindChrome();
+
+function searchIndex(){
+ const pages=[
+  {key:'hub',label:'Apps',terms:'hub home launcher',run:()=>go('hub')},
+  {key:'profile',label:'Account profile',run:()=>go('profile')},
+  {key:'settings',label:'Settings',run:()=>go('settings')}
+ ];
+ return {apps:hubSearchApps(),buildings:hubSearchBuildings(),people:[],clients:[],pages,settings:searchSettingsItems()};
+}
+
+settingsInit(me().id);
+bindShared();
+hubBoot();bootSession();
+S.offline=navigator.onLine===false;
+render();
+shareReady();
+hubReturn();
+
+</script>
+</body>
+</html>
